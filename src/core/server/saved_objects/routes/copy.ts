@@ -1,12 +1,19 @@
 /*
- * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Any modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 import { schema } from '@osd/config-schema';
 import { IRouter } from '../../http';
 import { SavedObjectConfig } from '../saved_objects_config';
 import { exportSavedObjectsToStream } from '../export';
+import { validateObjects } from './utils';
 import { importSavedObjectsFromStream } from '../import';
 
 export const registerCopyRoute = (router: IRouter, config: SavedObjectConfig) => {
@@ -17,11 +24,14 @@ export const registerCopyRoute = (router: IRouter, config: SavedObjectConfig) =>
       path: '/_copy',
       validate: {
         body: schema.object({
-          objects: schema.arrayOf(
-            schema.object({
-              type: schema.string(),
-              id: schema.string(),
-            })
+          objects: schema.maybe(
+            schema.arrayOf(
+              schema.object({
+                type: schema.string(),
+                id: schema.string(),
+              }),
+              { maxSize: maxImportExportSize }
+            )
           ),
           includeReferencesDeep: schema.boolean({ defaultValue: false }),
           targetWorkspace: schema.string(),
@@ -37,15 +47,15 @@ export const registerCopyRoute = (router: IRouter, config: SavedObjectConfig) =>
         .getImportableAndExportableTypes()
         .map((t) => t.name);
 
-      const invalidObjects = objects.filter((obj) => !supportedTypes.includes(obj.type));
-      if (invalidObjects.length) {
-        return res.badRequest({
-          body: {
-            message: `Trying to copy object(s) with unsupported types: ${invalidObjects
-              .map((obj) => `${obj.type}:${obj.id}`)
-              .join(', ')}`,
-          },
-        });
+      if (objects) {
+        const validationError = validateObjects(objects, supportedTypes);
+        if (validationError) {
+          return res.badRequest({
+            body: {
+              message: validationError,
+            },
+          });
+        }
       }
 
       const objectsListStream = await exportSavedObjectsToStream({

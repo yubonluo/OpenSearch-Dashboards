@@ -43,13 +43,17 @@ import { FormattedMessage } from '@osd/i18n/react';
 export const Header = ({
   onExportAll,
   onImport,
+  onCopy,
   onRefresh,
   filteredCount,
+  selectedCount,
 }: {
   onExportAll: () => void;
   onImport: () => void;
+  onCopy: () => void;
   onRefresh: () => void;
   filteredCount: number;
+  selectedCount: number;
 }) => (
   <Fragment>
     <EuiFlexGroup justifyContent="spaceBetween" alignItems="baseline">
@@ -92,6 +96,20 @@ export const Header = ({
               <FormattedMessage
                 id="savedObjectsManagement.objectsTable.header.importButtonLabel"
                 defaultMessage="Import"
+              />
+            </EuiButtonEmpty>
+          </EuiFlexItem>
+          <EuiFlexItem grow={false}>
+            <EuiButtonEmpty
+              size="s"
+              iconType="copy"
+              data-test-subj="copyObjects"
+              onClick={onCopy}
+              disabled={selectedCount === 0}
+            >
+              <FormattedMessage
+                id="savedObjectsManagement.objectsTable.header.copyButtonLabel"
+                defaultMessage="Copy"
               />
             </EuiButtonEmpty>
           </EuiFlexItem>
