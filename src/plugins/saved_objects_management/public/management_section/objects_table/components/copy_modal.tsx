@@ -23,19 +23,18 @@ import {
   EuiSpacer,
   EuiComboBox,
   EuiFormRow,
-  EuiSwitch,
+  EuiCheckbox,
   EuiComboBoxOptionOption,
   EuiInMemoryTable,
   EuiToolTip,
   EuiIcon,
   EuiCallOut,
+  EuiText,
 } from '@elastic/eui';
 import { WorkspaceAttribute, WorkspacesStart } from 'opensearch-dashboards/public';
 import { i18n } from '@osd/i18n';
-import { iteratorSymbol } from 'immer/dist/internal';
 import { SavedObjectWithMetadata } from '../../../types';
 import { getSavedObjectLabel } from '../../../lib';
-import { SAVED_OBJECT_TYPE_WORKSAPCE } from '../../../constants';
 
 type WorkspaceOption = EuiComboBoxOptionOption<WorkspaceAttribute>;
 
@@ -47,11 +46,12 @@ interface Props {
     targetWorkspace: string
   ) => Promise<void>;
   onClose: () => void;
-  seletedSavedObjects: SavedObjectWithMetadata[];
+  getCopyWorkspaces: () => Promise<WorkspaceAttribute[]>;
+  selectedSavedObjects: SavedObjectWithMetadata[];
 }
 
 interface State {
-  allSeletedObjects: SavedObjectWithMetadata[];
+  allSelectedObjects: SavedObjectWithMetadata[];
   workspaceOptions: WorkspaceOption[];
   allWorkspaceOptions: WorkspaceOption[];
   targetWorkspaceOption: WorkspaceOption[];
@@ -66,7 +66,7 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
     super(props);
 
     this.state = {
-      allSeletedObjects: this.props.seletedSavedObjects,
+      allSelectedObjects: this.props.selectedSavedObjects,
       workspaceOptions: [],
       allWorkspaceOptions: [],
       targetWorkspaceOption: [],
@@ -80,21 +80,21 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
   };
 
   async componentDidMount() {
-    const { workspaces } = this.props;
-    const workspaceList = await workspaces.client.workspaceList$;
-    const currentWorkspace = await workspaces.client.currentWorkspace$;
+    const { workspaces, getCopyWorkspaces } = this.props;
+    const workspaceList = await getCopyWorkspaces();
+    const currentWorkspace = workspaces.currentWorkspace$;
 
     if (!!currentWorkspace?.value?.name) {
       const currentWorkspaceName = currentWorkspace.value.name;
-      const filteredWorkspaceOptions = workspaceList.value
+      const filteredWorkspaceOptions = workspaceList
         .map(this.workspaceToOption)
-        .filter((item) => item.label !== currentWorkspaceName);
+        .filter((item: WorkspaceOption) => item.label !== currentWorkspaceName);
       this.setState({
         workspaceOptions: filteredWorkspaceOptions,
         allWorkspaceOptions: filteredWorkspaceOptions,
       });
     } else {
-      const allWorkspaceOptions = workspaceList.value.map(this.workspaceToOption);
+      const allWorkspaceOptions = workspaceList.map(this.workspaceToOption);
       this.setState({
         workspaceOptions: allWorkspaceOptions,
         allWorkspaceOptions,
@@ -153,18 +153,16 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
       workspaceOptions,
       targetWorkspaceOption,
       isIncludeReferencesDeepChecked,
-      allSeletedObjects,
+      allSelectedObjects,
     } = this.state;
     const targetWorkspaceId = targetWorkspaceOption?.at(0)?.key;
-    const includedSeletedObjects = allSeletedObjects.filter((item) =>
-      !!targetWorkspaceId && !!item.workspaces
-        ? !item.workspaces.includes(targetWorkspaceId)
-        : true && item.type !== SAVED_OBJECT_TYPE_WORKSAPCE
+    const includedSelectedObjects = allSelectedObjects.filter((item) =>
+      !!targetWorkspaceId && !!item.workspaces ? !item.workspaces.includes(targetWorkspaceId) : true
     );
-    const ignoredSeletedObjectsLength = allSeletedObjects.length - includedSeletedObjects.length;
+    const ignoredSelectedObjectsLength = allSelectedObjects.length - includedSelectedObjects.length;
 
     let confirmCopyButtonEnabled = false;
-    if (!!targetWorkspaceId && includedSeletedObjects.length > 0) {
+    if (!!targetWorkspaceId && includedSelectedObjects.length > 0) {
       confirmCopyButtonEnabled = true;
     }
 
@@ -176,7 +174,7 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
     );
     const warningMessageForMultipleSavedObjects = (
       <p>
-        <b style={{ color: '#000' }}>{ignoredSeletedObjectsLength}</b> saved objects will{' '}
+        <b style={{ color: '#000' }}>{ignoredSelectedObjectsLength}</b> saved objects will{' '}
         <b style={{ color: '#000' }}>not</b> be copied, because they have already existed in the
         selected workspace or they are worksapces themselves.
       </p>
@@ -188,9 +186,9 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
           title="Some saved objects will be ignored."
           color="warning"
           iconType="help"
-          aria-disabled={ignoredSeletedObjectsLength === 0}
+          aria-disabled={ignoredSelectedObjectsLength === 0}
         >
-          {ignoredSeletedObjectsLength === 1
+          {ignoredSelectedObjectsLength === 1
             ? warningMessageForOnlyOneSavedObject
             : warningMessageForMultipleSavedObjects}
         </EuiCallOut>
@@ -208,7 +206,11 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
           <EuiModalHeaderTitle>
             <FormattedMessage
               id="savedObjectsManagement.objectsTable.copyModal.title"
-              defaultMessage="Copy saved objects"
+              defaultMessage={
+                'Duplicate ' +
+                allSelectedObjects.length.toString() +
+                (allSelectedObjects.length > 1 ? ' objects?' : ' object?')
+              }
             />
           </EuiModalHeaderTitle>
         </EuiModalHeader>
@@ -219,36 +221,61 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
             label={
               <FormattedMessage
                 id="savedObjectsManagement.objectsTable.copyModal.targetWorkspacelabel"
-                defaultMessage="Select a workspace to copy to"
+                defaultMessage="Destination workspace"
               />
             }
           >
-            <EuiComboBox
-              options={workspaceOptions}
-              onChange={this.onTargetWorkspaceChange}
-              selectedOptions={targetWorkspaceOption}
-              singleSelection={{ asPlainText: true }}
-              onSearchChange={this.onSearchWorkspaceChange}
-              isClearable={false}
-              isInvalid={!confirmCopyButtonEnabled}
-            />
+            <>
+              <EuiText size="s" color="subdued">
+                {'Specify a workspace where the objects will be duplicated.'}
+              </EuiText>
+              <EuiSpacer size="s" />
+              <EuiComboBox
+                options={workspaceOptions}
+                onChange={this.onTargetWorkspaceChange}
+                selectedOptions={targetWorkspaceOption}
+                singleSelection={{ asPlainText: true }}
+                onSearchChange={this.onSearchWorkspaceChange}
+                isClearable={false}
+                isInvalid={!confirmCopyButtonEnabled}
+              />
+            </>
           </EuiFormRow>
 
           <EuiSpacer size="m" />
-          <EuiSwitch
-            name="includeReferencesDeep"
+
+          <EuiFormRow
+            fullWidth
             label={
               <FormattedMessage
-                id="savedObjectsManagement.objectsTable.copyModal.includeReferencesDeepLabel"
-                defaultMessage="Include related objects"
+                id="savedObjectsManagement.objectsTable.copyModal.relatedObjects"
+                defaultMessage="Related Objects"
               />
             }
-            checked={isIncludeReferencesDeepChecked}
-            onChange={this.changeIncludeReferencesDeep}
-          />
+          >
+            <>
+              <EuiText size="s" color="subdued">
+                {
+                  'We recommended duplicating related objects to ensure your duplicated objects will continue to function.'
+                }
+              </EuiText>
+              <EuiSpacer size="s" />
+              <EuiCheckbox
+                id={'includeReferencesDeep'}
+                label={
+                  <FormattedMessage
+                    id="savedObjectsManagement.objectsTable.copyModal.includeReferencesDeepLabel"
+                    defaultMessage="Duplicate related objects"
+                  />
+                }
+                checked={isIncludeReferencesDeepChecked}
+                onChange={this.changeIncludeReferencesDeep}
+              />
+            </>
+          </EuiFormRow>
 
           <EuiSpacer size="m" />
-          {ignoredSeletedObjectsLength === 0 ? null : ignoreSomeObjectsChildren}
+          {ignoredSelectedObjectsLength === 0 ? null : ignoreSomeObjectsChildren}
           <p>
             <FormattedMessage
               id="savedObjectsManagement.objectsTable.copyModal.tableTitle"
@@ -257,7 +284,7 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
           </p>
           <EuiSpacer size="m" />
           <EuiInMemoryTable
-            items={includedSeletedObjects}
+            items={includedSelectedObjects}
             columns={[
               {
                 field: 'type',
@@ -302,13 +329,13 @@ export class SavedObjectsCopyModal extends React.Component<Props, State> {
           <EuiButton
             fill
             data-test-subj="copyConfirmButton"
-            onClick={() => this.copySavedObjects(includedSeletedObjects)}
+            onClick={() => this.copySavedObjects(includedSelectedObjects)}
             isLoading={this.state.isLoading}
             disabled={!confirmCopyButtonEnabled}
           >
             <FormattedMessage
               id="savedObjectsManagement.objectsTable.copyModal.confirmButtonLabel"
-              defaultMessage="Confirm copy"
+              defaultMessage="Duplicate"
             />
           </EuiButton>
         </EuiModalFooter>

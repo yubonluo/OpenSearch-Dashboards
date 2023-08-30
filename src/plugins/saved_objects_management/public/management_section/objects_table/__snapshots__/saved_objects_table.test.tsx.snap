@@ -373,6 +373,7 @@ exports[`SavedObjectsTable should render normally 1`] = `
         ]
       }
       onActionRefresh={[Function]}
+      onCopy={[Function]}
       onDelete={[Function]}
       onExport={[Function]}
       onQueryChange={[Function]}

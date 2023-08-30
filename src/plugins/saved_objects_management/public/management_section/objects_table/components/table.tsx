@@ -46,6 +46,7 @@ import {
   EuiText,
   EuiTableFieldDataColumnType,
   EuiTableActionsColumnType,
+  EuiButtonIcon,
 } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
 import { FormattedMessage } from '@osd/i18n/react';
@@ -62,7 +63,6 @@ export interface TableProps {
   basePath: IBasePath;
   actionRegistry: SavedObjectsManagementActionServiceStart;
   columnRegistry: SavedObjectsManagementColumnServiceStart;
-  namespaceRegistry: SavedObjectsManagementNamespaceServiceStart;
   selectedSavedObjects: SavedObjectWithMetadata[];
   selectionConfig: {
     onSelectionChange: (selection: SavedObjectWithMetadata[]) => void;
@@ -70,6 +70,7 @@ export interface TableProps {
   filters: any[];
   canDelete: boolean;
   onDelete: () => void;
+  onCopy: () => void;
   onActionRefresh: (object: SavedObjectWithMetadata) => void;
   onExport: (includeReferencesDeep: boolean) => void;
   goInspectObject: (obj: SavedObjectWithMetadata) => void;
@@ -170,6 +171,7 @@ export class Table extends PureComponent<TableProps, TableState> {
       filters,
       selectionConfig: selection,
       onDelete,
+      onCopy,
       onActionRefresh,
       selectedSavedObjects,
       onTableChange,
@@ -178,7 +180,6 @@ export class Table extends PureComponent<TableProps, TableState> {
       basePath,
       actionRegistry,
       columnRegistry,
-      namespaceRegistry,
       dateFormat,
       availableWorkspaces,
       currentWorkspaceId,
@@ -396,6 +397,13 @@ export class Table extends PureComponent<TableProps, TableState> {
                 defaultMessage="Delete"
               />
             </EuiButton>,
+            <EuiButtonIcon
+              key="copySO"
+              iconType="copyClipboard"
+              onClick={onCopy}
+              isDisabled={selectedSavedObjects.length === 0}
+              data-test-subj="savedObjectsManagementCopy"
+            />,
             <EuiPopover
               key="exportSOOptions"
               button={button}
