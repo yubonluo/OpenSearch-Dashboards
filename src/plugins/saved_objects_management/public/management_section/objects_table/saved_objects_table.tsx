@@ -155,6 +155,7 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
   private _isMounted = false;
   private currentWorkspaceIdSubscription?: Subscription;
   private workspacesSubscription?: Subscription;
+  private workspacesEnabledSubscription?: Subscription;
 
   constructor(props: SavedObjectsTableProps) {
     super(props);
@@ -239,6 +240,7 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
     this.debouncedFetchObjects.cancel();
     this.currentWorkspaceIdSubscription?.unsubscribe();
     this.workspacesSubscription?.unsubscribe();
+    this.workspacesEnabledSubscription?.unsubscribe();
   }
 
   fetchCounts = async () => {
@@ -711,9 +713,7 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
       return null;
     }
     const { applications } = this.props;
-    const newIndexPatternUrl = applications.getUrlForApp('management', {
-      path: 'opensearch-dashboards/indexPatterns',
-    });
+    const newIndexPatternUrl = applications.getUrlForApp('indexPatterns');
 
     return (
       <Flyout
@@ -1074,6 +1074,9 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
       });
     }
 
+    // workspace enable and no workspace is selected
+    const hideImport = workspaceEnabled && !workspaceId;
+
     return (
       <EuiPageContent horizontalPosition="center">
         {this.renderFlyout()}
@@ -1088,6 +1091,8 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
           onRefresh={this.refreshObjects}
           filteredCount={filteredItemCount}
           selectedCount={selectedSavedObjects.length}
+          hideImport={hideImport}
+          showDuplicateAll={workspaceEnabled}
         />
         <EuiSpacer size="xs" />
         <RedirectAppLinks application={applications}>
@@ -1117,6 +1122,7 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
             dateFormat={this.props.dateFormat}
             availableWorkspaces={availableWorkspaces}
             currentWorkspaceId={currentWorkspaceId}
+            showDuplicate={workspaceEnabled}
           />
         </RedirectAppLinks>
       </EuiPageContent>
