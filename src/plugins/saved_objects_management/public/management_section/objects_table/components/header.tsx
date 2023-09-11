@@ -46,8 +46,7 @@ export const Header = ({
   onCopy,
   onRefresh,
   filteredCount,
-  selectedCount,
-  hideImport = false,
+  objectCount,
   showDuplicateAll = false,
 }: {
   onExportAll: () => void;
@@ -55,8 +54,7 @@ export const Header = ({
   onCopy: () => void;
   onRefresh: () => void;
   filteredCount: number;
-  selectedCount: number;
-  hideImport: boolean;
+  objectCount: number;
   showDuplicateAll: boolean;
 }) => (
   <Fragment>
@@ -80,7 +78,7 @@ export const Header = ({
                 size="s"
                 data-test-subj="copyObjects"
                 onClick={onCopy}
-                disabled={selectedCount === 0}
+                disabled={objectCount === 0}
               >
                 <FormattedMessage
                   id="savedObjectsManagement.objectsTable.header.duplicateAllButtonLabel"
@@ -105,21 +103,19 @@ export const Header = ({
               />
             </EuiButtonEmpty>
           </EuiFlexItem>
-          {!hideImport && (
-            <EuiFlexItem grow={false}>
-              <EuiButtonEmpty
-                size="s"
-                iconType="importAction"
-                data-test-subj="importObjects"
-                onClick={onImport}
-              >
-                <FormattedMessage
-                  id="savedObjectsManagement.objectsTable.header.importButtonLabel"
-                  defaultMessage="Import"
-                />
-              </EuiButtonEmpty>
-            </EuiFlexItem>
-          )}
+          <EuiFlexItem grow={false}>
+            <EuiButtonEmpty
+              size="s"
+              iconType="importAction"
+              data-test-subj="importObjects"
+              onClick={onImport}
+            >
+              <FormattedMessage
+                id="savedObjectsManagement.objectsTable.header.importButtonLabel"
+                defaultMessage="Import"
+              />
+            </EuiButtonEmpty>
+          </EuiFlexItem>
           <EuiFlexItem grow={false}>
             <EuiButtonEmpty size="s" iconType="refresh" onClick={onRefresh}>
               <FormattedMessage

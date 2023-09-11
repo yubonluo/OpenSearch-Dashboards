@@ -203,11 +203,11 @@ exports[`SavedObjectsTable should render normally 1`] = `
 >
   <Header
     filteredCount={4}
+    objectCount={4}
     onCopy={[Function]}
     onExportAll={[Function]}
     onImport={[Function]}
     onRefresh={[Function]}
-    selectedCount={0}
     showDuplicateAll={false}
   />
   <EuiSpacer
@@ -376,7 +376,8 @@ exports[`SavedObjectsTable should render normally 1`] = `
         ]
       }
       onActionRefresh={[Function]}
-      onCopy={[Function]}
+      onCopySelected={[Function]}
+      onCopySingle={[Function]}
       onDelete={[Function]}
       onExport={[Function]}
       onQueryChange={[Function]}
