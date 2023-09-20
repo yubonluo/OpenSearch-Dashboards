@@ -70,8 +70,8 @@ export interface TableProps {
   filters: any[];
   canDelete: boolean;
   onDelete: () => void;
-  onCopySelected: () => void;
-  onCopySingle: (object: SavedObjectWithMetadata) => void;
+  onDuplicateSelected: () => void;
+  onDuplicateSingle: (object: SavedObjectWithMetadata) => void;
   onActionRefresh: (object: SavedObjectWithMetadata) => void;
   onExport: (includeReferencesDeep: boolean) => void;
   goInspectObject: (obj: SavedObjectWithMetadata) => void;
@@ -173,8 +173,8 @@ export class Table extends PureComponent<TableProps, TableState> {
       filters,
       selectionConfig: selection,
       onDelete,
-      onCopySelected,
-      onCopySingle,
+      onDuplicateSelected,
+      onDuplicateSingle,
       onActionRefresh,
       selectedSavedObjects,
       onTableChange,
@@ -331,7 +331,7 @@ export class Table extends PureComponent<TableProps, TableState> {
                   type: 'icon',
                   icon: 'copyClipboard',
                   isPrimary: true,
-                  onClick: (object: SavedObjectWithMetadata<unknown>) => onCopySingle(object),
+                  onClick: (object: SavedObjectWithMetadata<unknown>) => onDuplicateSingle(object),
                   'data-test-subj': 'savedObjectsTableAction-duplicate',
                 },
               ]
@@ -454,7 +454,7 @@ export class Table extends PureComponent<TableProps, TableState> {
       <EuiButtonIcon
         key="copySO"
         iconType="copyClipboard"
-        onClick={onCopySelected}
+        onClick={onDuplicateSelected}
         isDisabled={selectedSavedObjects.length === 0}
         data-test-subj="savedObjectsManagementCopy"
       />

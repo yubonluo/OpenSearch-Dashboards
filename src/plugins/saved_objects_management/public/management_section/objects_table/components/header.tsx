@@ -43,7 +43,7 @@ import { FormattedMessage } from '@osd/i18n/react';
 export const Header = ({
   onExportAll,
   onImport,
-  onCopy,
+  onDuplicate,
   onRefresh,
   filteredCount,
   objectCount,
@@ -51,7 +51,7 @@ export const Header = ({
 }: {
   onExportAll: () => void;
   onImport: () => void;
-  onCopy: () => void;
+  onDuplicate: () => void;
   onRefresh: () => void;
   filteredCount: number;
   objectCount: number;
@@ -76,8 +76,8 @@ export const Header = ({
             <EuiFlexItem grow={false}>
               <EuiButtonEmpty
                 size="s"
-                data-test-subj="copyObjects"
-                onClick={onCopy}
+                data-test-subj="duplicateObjects"
+                onClick={onDuplicate}
                 disabled={objectCount === 0}
               >
                 <FormattedMessage
