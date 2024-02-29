@@ -38,7 +38,7 @@ import { validateReferences } from './validate_references';
 import { checkOriginConflicts } from './check_origin_conflicts';
 import { createSavedObjects } from './create_saved_objects';
 import { checkConflicts } from './check_conflicts';
-import { regenerateIds, regenerateIdsWithReference } from './regenerate_ids';
+import { regenerateIds } from './regenerate_ids';
 import { checkConflictsForDataSource } from './check_conflict_for_data_source';
 
 /**
@@ -86,13 +86,6 @@ export async function importSavedObjectsFromStream({
     // randomly generated id
     importIdMap = regenerateIds(collectSavedObjectsResult.collectedObjects, dataSourceId);
   } else {
-    importIdMap = await regenerateIdsWithReference({
-      savedObjects: collectSavedObjectsResult.collectedObjects,
-      savedObjectsClient,
-      workspaces,
-      objectLimit,
-      importIdMap,
-    });
     // in check conclict and override mode
     // Check single-namespace objects for conflicts in this namespace, and check multi-namespace objects for conflicts across all namespaces
     const checkConflictsParams = {
@@ -152,6 +145,7 @@ export async function importSavedObjectsFromStream({
     ...(workspaces ? { workspaces } : {}),
     dataSourceId,
     dataSourceTitle,
+    ...(workspaces ? { workspaces } : {}),
   };
   const createSavedObjectsResult = await createSavedObjects(createSavedObjectsParams);
   errorAccumulator = [...errorAccumulator, ...createSavedObjectsResult.errors];
