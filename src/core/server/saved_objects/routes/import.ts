@@ -60,10 +60,10 @@ export const registerImportRoute = (router: IRouter, config: SavedObjectConfig) 
           {
             overwrite: schema.boolean({ defaultValue: false }),
             createNewCopies: schema.boolean({ defaultValue: false }),
+            dataSourceId: schema.maybe(schema.string({ defaultValue: '' })),
             workspaces: schema.maybe(
               schema.oneOf([schema.string(), schema.arrayOf(schema.string())])
             ),
-            dataSourceId: schema.maybe(schema.string({ defaultValue: '' })),
           },
           {
             validate: (object) => {
@@ -123,9 +123,9 @@ export const registerImportRoute = (router: IRouter, config: SavedObjectConfig) 
         objectLimit: maxImportExportSize,
         overwrite,
         createNewCopies,
-        workspaces,
         dataSourceId,
         dataSourceTitle,
+        workspaces,
       });
 
       return res.ok({ body: result });

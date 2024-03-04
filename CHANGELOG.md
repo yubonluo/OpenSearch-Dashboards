@@ -41,6 +41,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - [Multiple Datasource] Add interfaces to register add-on authentication method from plug-in module ([#5851](https://github.com/opensearch-project/OpenSearch-Dashboards/pull/5851))
 - [Multiple Datasource] Able to Hide "Local Cluster" option from datasource DropDown ([#5827](https://github.com/opensearch-project/OpenSearch-Dashboards/pull/5827))
 - [Multiple Datasource] Add api registry and allow it to be added into client config in data source plugin ([#5895](https://github.com/opensearch-project/OpenSearch-Dashboards/pull/5895))
+- [Workspace] Optional workspaces params in repository ([#5949](https://github.com/opensearch-project/OpenSearch-Dashboards/pull/5949))
 
 ### 🐛 Bug Fixes
 
