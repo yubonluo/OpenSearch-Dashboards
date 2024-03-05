@@ -172,8 +172,6 @@ export const WorkspaceForm = ({
   const [icon, setIcon] = useState(defaultValues?.icon);
   const [defaultVISTheme, setDefaultVISTheme] = useState(defaultValues?.defaultVISTheme);
 
-  // feature visibility section will be hidden in management workspace
-  // permission section will be hidden when permission is not enabled
   const [selectedTab, setSelectedTab] = useState(WorkspaceFormTabs.FeatureVisibility);
   const [numberOfErrors, setNumberOfErrors] = useState(0);
   // The matched feature id list based on original feature config,
