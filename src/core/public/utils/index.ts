@@ -37,5 +37,4 @@ export {
   formatUrlWithWorkspaceId,
   getWorkspaceIdFromUrl,
   PUBLIC_WORKSPACE_ID,
-  MANAGEMENT_WORKSPACE_ID,
 } from '../../utils';
