@@ -12,21 +12,20 @@ import {
   EuiLink,
   EuiButton,
   EuiInMemoryTable,
-  EuiTableSelectionType,
   EuiSearchBarProps,
 } from '@elastic/eui';
 import useObservable from 'react-use/lib/useObservable';
 import { of } from 'rxjs';
 import { i18n } from '@osd/i18n';
+import { debounce } from '../../../../../core/public';
 import { WorkspaceAttribute } from '../../../../../core/public';
-
 import { useOpenSearchDashboards } from '../../../../../plugins/opensearch_dashboards_react/public';
 import { switchWorkspace, updateWorkspace } from '../utils/workspace';
-import { debounce } from '../utils/common';
 
 import { WORKSPACE_CREATE_APP_ID } from '../../../common/constants';
 
 import { cleanWorkspaceId } from '../../../../../core/public';
+import { DeleteWorkspaceModal } from '../delete_workspace_modal';
 
 const WORKSPACE_LIST_PAGE_DESCRIPTIOIN = i18n.translate('workspace.list.description', {
   defaultMessage:
@@ -47,9 +46,7 @@ export const WorkspaceList = () => {
     pageSize: 5,
     pageSizeOptions: [5, 10, 20],
   });
-
-  // Will be uesed when updating table actions
-  const [, setSelection] = useState<WorkspaceAttribute[]>([]);
+  const [deletedWorkspace, setDeletedWorkspace] = useState<WorkspaceAttribute | null>(null);
 
   const handleSwitchWorkspace = useCallback(
     (id: string) => {
@@ -118,8 +115,15 @@ export const WorkspaceList = () => {
           name: 'Edit',
           icon: 'pencil',
           type: 'icon',
-          description: 'edit workspace',
+          description: 'Edit workspace',
           onClick: ({ id }: WorkspaceAttribute) => handleUpdateWorkspace(id),
+        },
+        {
+          name: 'Delete',
+          icon: 'trash',
+          type: 'icon',
+          description: 'Delete workspace',
+          onClick: (item: WorkspaceAttribute) => setDeletedWorkspace(item),
         },
       ],
     },
@@ -130,20 +134,24 @@ export const WorkspaceList = () => {
       return '';
     }
 
-    return cleanWorkspaceId(
-      application.getUrlForApp(WORKSPACE_CREATE_APP_ID, {
-        absolute: false,
-      })
-    );
+    const appUrl = application.getUrlForApp(WORKSPACE_CREATE_APP_ID, {
+      absolute: false,
+    });
+    if (!appUrl) return '';
+
+    return cleanWorkspaceId(appUrl);
   }, [application, http]);
 
   const debouncedSetQueryInput = useMemo(() => {
     return debounce(setQueryInput, 300);
   }, [setQueryInput]);
 
-  const handleSearchInput: EuiSearchBarProps['onChange'] = ({ query }) => {
-    debouncedSetQueryInput(query?.text ?? '');
-  };
+  const handleSearchInput: EuiSearchBarProps['onChange'] = useCallback(
+    ({ query }) => {
+      debouncedSetQueryInput(query?.text ?? '');
+    },
+    [debouncedSetQueryInput]
+  );
 
   const search: EuiSearchBarProps = {
     onChange: handleSearchInput,
@@ -151,17 +159,14 @@ export const WorkspaceList = () => {
       incremental: true,
     },
     toolsRight: [
-      <EuiButton href={workspaceCreateUrl} key="create_workspace">
+      <EuiButton
+        href={workspaceCreateUrl}
+        key="create_workspace"
+        data-test-subj="workspaceList-create-workspace"
+      >
         Create workspace
       </EuiButton>,
     ],
-  };
-
-  const selectionValue: EuiTableSelectionType<WorkspaceAttribute> = {
-    selectable: () => true,
-    onSelectionChange: (selection) => {
-      setSelection(selection);
-    },
   };
 
   return (
@@ -171,6 +176,7 @@ export const WorkspaceList = () => {
           restrictWidth
           pageTitle="Workspaces"
           description={WORKSPACE_LIST_PAGE_DESCRIPTIOIN}
+          style={{ paddingBottom: 0, borderBottom: 0 }}
         />
         <EuiPageContent
           verticalPosition="center"
@@ -197,11 +203,17 @@ export const WorkspaceList = () => {
               },
             }}
             isSelectable={true}
-            selection={selectionValue}
             search={search}
           />
         </EuiPageContent>
       </EuiPageBody>
+      {deletedWorkspace && (
+        <DeleteWorkspaceModal
+          selectedWorkspace={deletedWorkspace}
+          onClose={() => setDeletedWorkspace(null)}
+          returnToHome={false}
+        />
+      )}
     </EuiPage>
   );
 };
