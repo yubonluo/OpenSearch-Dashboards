@@ -1552,7 +1552,7 @@ export class SavedObjectsRepository {
 
     let bulkGetRequestIndexCounter = 0;
     const expectedBulkGetResults: Either[] = objects.map((object) => {
-      const { type, id } = object;
+      const { type, id, workspaces } = object;
 
       if (!this._allowedTypes.includes(type)) {
         return {
@@ -1586,6 +1586,7 @@ export class SavedObjectsRepository {
         [type]: attributes,
         updated_at: time,
         ...(Array.isArray(references) && { references }),
+        ...(workspaces && { workspaces }),
       };
 
       const requiresNamespacesCheck = this._registry.isMultiNamespace(object.type);
