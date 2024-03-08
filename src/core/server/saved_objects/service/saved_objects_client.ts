@@ -123,6 +123,7 @@ export interface SavedObjectsBulkUpdateObject<T = unknown>
    * Note: the default namespace's string representation is `'default'`, and its ID representation is `undefined`.
    **/
   namespace?: string;
+  workspaces?: string[];
 }
 
 /**
