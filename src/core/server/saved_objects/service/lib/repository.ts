@@ -1554,7 +1554,7 @@ export class SavedObjectsRepository {
 
     let bulkGetRequestIndexCounter = 0;
     const expectedBulkGetResults: Either[] = objects.map((object) => {
-      const { type, id, workspaces } = object;
+      const { type, id } = object;
 
       if (!this._allowedTypes.includes(type)) {
         return {
