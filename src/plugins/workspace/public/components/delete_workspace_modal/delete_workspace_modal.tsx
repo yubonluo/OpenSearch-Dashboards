@@ -77,7 +77,7 @@ export function DeleteWorkspaceModal(props: DeleteWorkspaceModalProps) {
       );
       notifications?.toasts.addSuccess({
         title: i18n.translate('workspace.deleteWorkspaceModal.move.successNotification', {
-          defaultMessage: 'Moved saved ' + result.length + ' objects successfully',
+          defaultMessage: 'Moved ' + result.length + ' saved objects successfully',
         }),
       });
     } catch (e) {
