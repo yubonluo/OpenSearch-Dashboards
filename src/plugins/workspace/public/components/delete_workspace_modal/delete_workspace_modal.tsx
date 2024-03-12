@@ -23,8 +23,6 @@ import { i18n } from '@osd/i18n';
 import { useObservable } from 'react-use';
 import { useOpenSearchDashboards } from '../../../../opensearch_dashboards_react/public';
 import { WorkspaceClient } from '../../workspace_client';
-import { getAllowedTypes } from './get_allowed_types';
-import { moveToTargetWorkspace } from './move_to_target_workspace';
 
 type WorkspaceOption = EuiComboBoxOptionOption<WorkspaceAttribute>;
 
