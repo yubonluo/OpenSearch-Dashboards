@@ -155,10 +155,10 @@ export class WorkspaceSavedObjectsClientWrapper {
     } catch (e) {
       return false;
     }
-    const adminGroups = config?.dashboardAdmin?.groups || [];
-    const adminUsers = config?.dashboardAdmin?.users || [];
-    const groupMatchAny = groups?.some((group) => adminGroups.includes(group)) || false;
-    const userMatchAny = users?.some((user) => adminUsers.includes(user)) || false;
+    const adminGroups = config.dashboardAdmin?.groups || [];
+    const adminUsers = config.dashboardAdmin?.users || [];
+    const groupMatchAny = groups.some((group) => adminGroups.includes(group)) || false;
+    const userMatchAny = users.some((user) => adminUsers.includes(user)) || false;
     return groupMatchAny || userMatchAny;
   }
 
