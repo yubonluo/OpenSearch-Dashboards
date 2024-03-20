@@ -4,6 +4,8 @@
  */
 
 import { i18n } from '@osd/i18n';
+import { Observable } from 'rxjs';
+import { first } from 'rxjs/operators';
 
 import {
   OpenSearchDashboardsRequest,
@@ -32,6 +34,7 @@ import {
   WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
   WorkspacePermissionMode,
 } from '../../common/constants';
+import { WorkspacePluginConfigType } from '../../config';
 
 // Can't throw unauthorized for now, the page will be refreshed if unauthorized
 const generateWorkspacePermissionError = () =>
@@ -68,6 +71,7 @@ const getDefaultValuesForEmpty = <T>(values: T[] | undefined, defaultValues: T[]
 
 export class WorkspaceSavedObjectsClientWrapper {
   private getScopedClient?: SavedObjectsServiceStart['getScopedClient'];
+  private config?: WorkspacePluginConfigType;
   private formatWorkspacePermissionModeToStringArray(
     permission: WorkspacePermissionMode | WorkspacePermissionMode[]
   ): string[] {
@@ -139,6 +143,22 @@ export class WorkspaceSavedObjectsClientWrapper {
     }
     return false;
   };
+
+  private isDashboardAdmin(request: OpenSearchDashboardsRequest): boolean {
+    const config = this.config || ({} as WorkspacePluginConfigType);
+
+    // Before the user login OSD, calling the getPrincipalsFromRequest method will throw 'NOT_AUTHORIZED' exception.
+    try {
+      const { groups = [], users = [] } = this.permissionControl.getPrincipalsFromRequest(request);
+      const adminGroups = config?.dashboardAdmin?.groups || [];
+      const adminUsers = config?.dashboardAdmin?.users || [];
+      const groupMatchAny = groups?.some((group) => adminGroups.includes(group)) || false;
+      const userMatchAny = users?.some((user) => adminUsers.includes(user)) || false;
+      return groupMatchAny || userMatchAny;
+    } catch (e) {
+      return false;
+    }
+  }
 
   /**
    * check if the type include workspace
@@ -527,6 +547,12 @@ export class WorkspaceSavedObjectsClientWrapper {
       return await wrapperOptions.client.deleteByWorkspace(workspace, options);
     };
 
+    const isDashboardAdmin = this.isDashboardAdmin(wrapperOptions.request);
+
+    if (isDashboardAdmin) {
+      return wrapperOptions.client;
+    }
+
     return {
       ...wrapperOptions.client,
       get: getWithWorkspacePermissionControl,
@@ -545,5 +571,20 @@ export class WorkspaceSavedObjectsClientWrapper {
     };
   };
 
-  constructor(private readonly permissionControl: SavedObjectsPermissionControlContract) {}
+  constructor(
+    private readonly permissionControl: SavedObjectsPermissionControlContract,
+    private readonly options: {
+      config$: Observable<WorkspacePluginConfigType>;
+    }
+  ) {
+    this.options?.config$.subscribe((config) => {
+      this.config = config;
+    });
+    this.options?.config$
+      .pipe(first())
+      .toPromise()
+      .then((config) => {
+        this.config = config;
+      });
+  }
 }

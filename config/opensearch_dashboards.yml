@@ -290,3 +290,8 @@
 
 # Set the value to true to enable workspace feature
 # workspace.enabled: false
+
+# Set the backend roles in groups or users, whoever has the backend roles defined in this config will be regard as dashboard admin.
+# Dashboard admin will have the access to all the workspaces and objects inside OpenSearch Dashboards.
+# workspace.dashboardAdmin.groups: ["dashboard_admin"]
+# workspace.dashboardAdmin.users: ["dashboard_admin"]

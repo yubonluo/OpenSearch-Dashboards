@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { of } from 'rxjs';
 import { SavedObjectsErrorHelpers } from '../../../../core/server';
 import { WorkspaceSavedObjectsClientWrapper } from './workspace_saved_objects_client_wrapper';
 
-const generateWorkspaceSavedObjectsClientWrapper = () => {
+const generateWorkspaceSavedObjectsClientWrapper = (isDashboardAdmin = false) => {
   const savedObjectsStore = [
     {
       type: 'dashboard',
@@ -79,9 +80,24 @@ const generateWorkspaceSavedObjectsClientWrapper = () => {
     }),
     validateSavedObjectsACL: jest.fn(),
     batchValidate: jest.fn(),
-    getPrincipalsFromRequest: jest.fn().mockImplementation(() => ({ users: ['user-1'] })),
+    getPrincipalsFromRequest: jest.fn().mockImplementation(() => {
+      return isDashboardAdmin ? { groups: ['dashboard_admin'] } : { users: ['user-1'] };
+    }),
   };
-  const wrapper = new WorkspaceSavedObjectsClientWrapper(permissionControlMock);
+  const configMock = {
+    enabled: true,
+    permission: {
+      enabled: true,
+    },
+    dashboardAdmin: {
+      groups: ['dashboard_admin'],
+      users: ['dashboard_admin'],
+    },
+  };
+  const optionsMock = {
+    config$: of(configMock),
+  };
+  const wrapper = new WorkspaceSavedObjectsClientWrapper(permissionControlMock, optionsMock);
   wrapper.setScopedClient(() => ({
     find: jest.fn().mockImplementation(async () => ({
       saved_objects: [{ id: 'workspace-1', type: 'workspace' }],
@@ -94,6 +110,7 @@ const generateWorkspaceSavedObjectsClientWrapper = () => {
     requestMock,
   };
 };
+const isDashboardAdmin = true;
 
 describe('WorkspaceSavedObjectsClientWrapper', () => {
   describe('wrapperFactory', () => {
@@ -126,6 +143,17 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
         const { wrapper, clientMock } = generateWorkspaceSavedObjectsClientWrapper();
         const deleteArgs = ['dashboard', 'foo', { force: true }] as const;
         await wrapper.delete(...deleteArgs);
+        expect(clientMock.delete).toHaveBeenCalledWith(...deleteArgs);
+      });
+      it('should call client.delete if backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        const deleteArgs = ['dashboard', 'not-permitted-dashboard'] as const;
+        await wrapper.delete(...deleteArgs);
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
         expect(clientMock.delete).toHaveBeenCalledWith(...deleteArgs);
       });
     });
@@ -170,6 +198,23 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
         await wrapper.update(...updateArgs);
         expect(clientMock.update).toHaveBeenCalledWith(...updateArgs);
       });
+      it('should call client.update if backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        const updateArgs = [
+          'dashboard',
+          'not-permitted-dashboard',
+          {
+            bar: 'for',
+          },
+        ] as const;
+        await wrapper.update(...updateArgs);
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
+        expect(clientMock.update).toHaveBeenCalledWith(...updateArgs);
+      });
     });
 
     describe('bulk update', () => {
@@ -204,6 +249,19 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
         const objectsToUpdate = [{ type: 'dashboard', id: 'foo', attributes: { bar: 'baz' } }];
         await wrapper.bulkUpdate(objectsToUpdate, {});
         expect(clientMock.bulkUpdate).toHaveBeenCalledWith(objectsToUpdate, {});
+      });
+      it('should call client.bulkUpdate if backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        const bulkUpdateArgs = [
+          { type: 'dashboard', id: 'not-permitted-dashboard', attributes: { bar: 'baz' } },
+        ];
+        await wrapper.bulkUpdate(bulkUpdateArgs);
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
+        expect(clientMock.bulkUpdate).toHaveBeenCalledWith(bulkUpdateArgs);
       });
     });
 
@@ -289,6 +347,25 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
           workspaces: ['workspace-1'],
         });
       });
+      it('should call client.bulkCreate if backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        const objectsToBulkCreate = [
+          { type: 'dashboard', id: 'not-permitted-dashboard', attributes: { bar: 'baz' } },
+        ];
+        await wrapper.bulkCreate(objectsToBulkCreate, {
+          overwrite: true,
+          workspaces: ['not-permitted-workspace'],
+        });
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
+        expect(clientMock.bulkCreate).toHaveBeenCalledWith(objectsToBulkCreate, {
+          overwrite: true,
+          workspaces: ['not-permitted-workspace'],
+        });
+      });
     });
 
     describe('create', () => {
@@ -363,6 +440,30 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
           }
         );
       });
+      it('should call client.create if backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        await wrapper.create(
+          'dashboard',
+          { foo: 'bar' },
+          {
+            id: 'not-permitted-dashboard',
+            overwrite: true,
+          }
+        );
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
+        expect(clientMock.create).toHaveBeenCalledWith(
+          'dashboard',
+          { foo: 'bar' },
+          {
+            id: 'not-permitted-dashboard',
+            overwrite: true,
+          }
+        );
+      });
     });
     describe('get', () => {
       it('should return saved object if no need to validate permission', async () => {
@@ -423,6 +524,18 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
         const result = await wrapper.get(...getArgs);
         expect(clientMock.get).toHaveBeenCalledWith(...getArgs);
         expect(result).toMatchInlineSnapshot(`[Error: Not Found]`);
+      });
+      it('should call client.get and return result with arguments backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        const getArgs = ['dashboard', 'not-permitted-dashboard'] as const;
+        const result = await wrapper.get(...getArgs);
+        expect(clientMock.get).toHaveBeenCalledWith(...getArgs);
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
+        expect(result.id).toBe('not-permitted-dashboard');
       });
     });
     describe('bulk get', () => {
@@ -488,6 +601,27 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
           ],
           {}
         );
+      });
+      it('should call client.bulkGet and return result with arguments if backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        const bulkGetArgs = [
+          {
+            type: 'dashboard',
+            id: 'foo',
+          },
+          {
+            type: 'dashboard',
+            id: 'not-permitted-dashboard',
+          },
+        ];
+        const result = await wrapper.bulkGet(bulkGetArgs);
+        expect(clientMock.bulkGet).toHaveBeenCalledWith(bulkGetArgs);
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
+        expect(result.saved_objects.length).toBe(2);
       });
     });
     describe('find', () => {
@@ -564,6 +698,22 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
           },
         });
       });
+      it('should call client.find with arguments if backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        await wrapper.find({
+          type: 'dashboard',
+          workspaces: ['workspace-1', 'not-permitted-workspace'],
+        });
+        expect(clientMock.find).toHaveBeenCalledWith({
+          type: 'dashboard',
+          workspaces: ['workspace-1', 'not-permitted-workspace'],
+        });
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
+      });
     });
     describe('deleteByWorkspace', () => {
       it('should call permission validate with workspace and throw workspace permission error if not permitted', async () => {
@@ -591,6 +741,16 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
 
         await wrapper.deleteByWorkspace('workspace-1', {});
         expect(clientMock.deleteByWorkspace).toHaveBeenCalledWith('workspace-1', {});
+      });
+      it('should call client.deleteByWorkspace if backend role is dashboard admin', async () => {
+        const {
+          wrapper,
+          clientMock,
+          permissionControlMock,
+        } = generateWorkspaceSavedObjectsClientWrapper(isDashboardAdmin);
+        await wrapper.deleteByWorkspace('not-permitted-workspace');
+        expect(clientMock.deleteByWorkspace).toHaveBeenCalledWith('not-permitted-workspace');
+        expect(permissionControlMock.validate).not.toHaveBeenCalled();
       });
     });
   });

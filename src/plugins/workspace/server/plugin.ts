@@ -81,7 +81,8 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
       this.permissionControl = new SavedObjectsPermissionControl(this.logger);
 
       this.workspaceSavedObjectsClientWrapper = new WorkspaceSavedObjectsClientWrapper(
-        this.permissionControl
+        this.permissionControl,
+        { config$: this.config$ }
       );
 
       core.savedObjects.addClientWrapper(
