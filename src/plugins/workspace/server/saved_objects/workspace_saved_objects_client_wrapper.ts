@@ -146,18 +146,20 @@ export class WorkspaceSavedObjectsClientWrapper {
 
   private isDashboardAdmin(request: OpenSearchDashboardsRequest): boolean {
     const config = this.config || ({} as WorkspacePluginConfigType);
+    let groups: string[];
+    let users: string[];
 
-    // Before the user login OSD, calling the getPrincipalsFromRequest method will throw 'NOT_AUTHORIZED' exception.
+    // There may be calls to saved objects client before user get authenticated, need to add a try catch here as `getPrincipalsFromRequest` will throw error when user is not authenticated.
     try {
-      const { groups = [], users = [] } = this.permissionControl.getPrincipalsFromRequest(request);
-      const adminGroups = config?.dashboardAdmin?.groups || [];
-      const adminUsers = config?.dashboardAdmin?.users || [];
-      const groupMatchAny = groups?.some((group) => adminGroups.includes(group)) || false;
-      const userMatchAny = users?.some((user) => adminUsers.includes(user)) || false;
-      return groupMatchAny || userMatchAny;
+      ({ groups = [], users = [] } = this.permissionControl.getPrincipalsFromRequest(request));
     } catch (e) {
       return false;
     }
+    const adminGroups = config?.dashboardAdmin?.groups || [];
+    const adminUsers = config?.dashboardAdmin?.users || [];
+    const groupMatchAny = groups?.some((group) => adminGroups.includes(group)) || false;
+    const userMatchAny = users?.some((user) => adminUsers.includes(user)) || false;
+    return groupMatchAny || userMatchAny;
   }
 
   /**
