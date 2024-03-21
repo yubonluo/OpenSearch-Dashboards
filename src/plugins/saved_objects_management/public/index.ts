@@ -56,7 +56,6 @@ export {
 export { SavedObjectRelation, SavedObjectWithMetadata, SavedObjectMetadata } from './types';
 export { SAVED_OBJECT_DELETE_TRIGGER, savedObjectDeleteTrigger } from './triggers';
 export { SavedObjectDeleteContext } from './ui_actions_bootstrap';
-export { SAVED_OBJECT_TYPE_WORKSPACE } from './constants';
 export {
   showDuplicateModal,
   SavedObjectsDuplicateModal,
