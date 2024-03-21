@@ -144,7 +144,7 @@ export class WorkspaceSavedObjectsClientWrapper {
     return false;
   };
 
-  private isDashboardAdmin(request: OpenSearchDashboardsRequest): boolean {
+  private isRequestByDashboardAdmin(request: OpenSearchDashboardsRequest): boolean {
     const config = this.config || ({} as WorkspacePluginConfigType);
     let groups: string[];
     let users: string[];
@@ -549,7 +549,7 @@ export class WorkspaceSavedObjectsClientWrapper {
       return await wrapperOptions.client.deleteByWorkspace(workspace, options);
     };
 
-    const isDashboardAdmin = this.isDashboardAdmin(wrapperOptions.request);
+    const isDashboardAdmin = this.isRequestByDashboardAdmin(wrapperOptions.request);
 
     if (isDashboardAdmin) {
       return wrapperOptions.client;
