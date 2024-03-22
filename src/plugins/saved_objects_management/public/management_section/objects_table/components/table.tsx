@@ -303,7 +303,7 @@ export class Table extends PureComponent<TableProps, TableState> {
           {
             name: i18n.translate(
               'savedObjectsManagement.objectsTable.table.columnActions.viewRelationshipsActionName',
-              { defaultMessage: 'View object relationships' }
+              { defaultMessage: 'Relationships' }
             ),
             description: i18n.translate(
               'savedObjectsManagement.objectsTable.table.columnActions.viewRelationshipsActionDescription',

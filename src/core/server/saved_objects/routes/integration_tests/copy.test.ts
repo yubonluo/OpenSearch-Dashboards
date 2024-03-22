@@ -114,7 +114,7 @@ describe(`POST ${URL}`, () => {
     const result = await supertest(httpSetup.server.listener).post(URL).send({}).expect(400);
 
     expect(result.body.message).toMatchInlineSnapshot(
-      `"[request body.objects]: expected value of type [array] but got [undefined]"`
+      `"[request body.targetWorkspace]: expected value of type [string] but got [undefined]"`
     );
   });
 
@@ -157,7 +157,7 @@ describe(`POST ${URL}`, () => {
       .expect(400);
 
     expect(result.body.message).toMatchInlineSnapshot(
-      `"Trying to copy object(s) with unsupported types: unknown:my-pattern"`
+      `"Trying to export object(s) with non-exportable types: unknown:my-pattern"`
     );
   });
 

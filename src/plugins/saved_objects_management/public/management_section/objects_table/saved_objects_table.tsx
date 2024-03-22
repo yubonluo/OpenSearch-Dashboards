@@ -719,27 +719,17 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
               }
             ),
           });
-        } else if (result.errors) {
-          const errorsIds = result.errors.map((item: { id: string }) => item.id);
-          notifications.toasts.addDanger({
-            title: i18n.translate(
-              'savedObjectsManagement.objectsTable.duplicate.dangerNotification',
-              {
-                defaultMessage:
-                  'Unable to duplicate ' +
-                  savedObjects.length.toString() +
-                  ' saved objects. These objects cannot be duplicated:' +
-                  errorsIds.join(','),
-              }
-            ),
-          });
         } else {
+          const errorIdMessages = result.errors
+            ? 'These objects cannot be duplicated:' +
+              result.errors.map((item: { id: string }) => item.id).join(',')
+            : '';
           notifications.toasts.addDanger({
             title: i18n.translate(
               'savedObjectsManagement.objectsTable.duplicate.dangerNotification',
               {
                 defaultMessage:
-                  'Unable to duplicate ' + savedObjects.length.toString() + ' saved objects',
+                  'Unable to duplicate ' + savedObjects.length.toString() + errorIdMessages,
               }
             ),
           });

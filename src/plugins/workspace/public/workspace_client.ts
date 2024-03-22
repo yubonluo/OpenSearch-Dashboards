@@ -121,8 +121,7 @@ export class WorkspaceClient {
         const workspaceIdsWithWritePermission = resultWithWritePermission.result.workspaces.map(
           (workspace: WorkspaceAttribute) => workspace.id
         );
-        let workspaces = result.result.workspaces;
-        workspaces = result.result.workspaces.map((workspace: WorkspaceAttribute) => ({
+        const workspaces = result.result.workspaces.map((workspace: WorkspaceAttribute) => ({
           ...workspace,
           libraryReadonly: !workspaceIdsWithWritePermission.includes(workspace.id),
         }));

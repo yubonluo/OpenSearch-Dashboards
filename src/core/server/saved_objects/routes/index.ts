@@ -71,8 +71,8 @@ export function registerRoutes({
   registerLogLegacyImportRoute(router, logger);
   registerExportRoute(router, config);
   registerImportRoute(router, config);
-  registerCopyRoute(router, config);
   registerResolveImportErrorsRoute(router, config);
+  registerCopyRoute(router, config);
 
   const internalRouter = http.createRouter('/internal/saved_objects/');
 
