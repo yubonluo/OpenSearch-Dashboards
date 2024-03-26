@@ -1,0 +1,203 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DuplicateModal should render normally 1`] = `
+<EuiModal
+  className="savedObjectsModal"
+  data-test-subj="savedObjectsDuplicateModal"
+  onClose={[MockFunction]}
+>
+  <EuiModalHeader>
+    <EuiModalHeaderTitle>
+      <FormattedMessage
+        defaultMessage="Duplicate {duplicateMode, select, all {all objects} other {{objectCount, plural, =1 {{objectName}} other {# objects}}}}?"
+        id="savedObjectsManagement.objectsTable.duplicateModal.title"
+        values={
+          Object {
+            "duplicateMode": "selected",
+            "objectCount": 3,
+            "objectName": "Dashboard_1",
+          }
+        }
+      />
+    </EuiModalHeaderTitle>
+  </EuiModalHeader>
+  <EuiModalBody>
+    <EuiFormRow
+      describedByIds={Array []}
+      display="row"
+      fullWidth={true}
+      hasChildLabel={true}
+      hasEmptyLabelSpace={false}
+      label="Destination workspace"
+      labelType="label"
+    >
+      <EuiText
+        color="subdued"
+        size="s"
+      >
+        Specify a workspace where the objects will be duplicated.
+      </EuiText>
+      <EuiSpacer
+        size="s"
+      />
+      <EuiComboBox
+        async={false}
+        compressed={false}
+        fullWidth={false}
+        isClearable={false}
+        isInvalid={true}
+        onChange={[Function]}
+        options={Array []}
+        selectedOptions={Array []}
+        singleSelection={
+          Object {
+            "asPlainText": true,
+          }
+        }
+        sortMatchesBy="none"
+      />
+    </EuiFormRow>
+    <EuiSpacer
+      size="m"
+    />
+    <EuiFormRow
+      describedByIds={Array []}
+      display="row"
+      fullWidth={true}
+      hasChildLabel={true}
+      hasEmptyLabelSpace={false}
+      label="Related Objects"
+      labelType="label"
+    >
+      <EuiText
+        color="subdued"
+        size="s"
+      >
+        We recommended duplicating related objects to ensure your duplicated objects will continue to function.
+      </EuiText>
+      <EuiSpacer
+        size="s"
+      />
+      <EuiCheckbox
+        checked={true}
+        compressed={false}
+        disabled={false}
+        id="includeReferencesDeep"
+        indeterminate={false}
+        label="Duplicate related objects"
+        onChange={[Function]}
+      />
+    </EuiFormRow>
+    <EuiSpacer
+      size="m"
+    />
+    <p>
+      <FormattedMessage
+        defaultMessage="The following saved objects will be copied:"
+        id="savedObjectsManagement.objectsTable.duplicateModal.tableTitle"
+        values={Object {}}
+      />
+    </p>
+    <EuiSpacer
+      size="m"
+    />
+    <EuiInMemoryTable
+      columns={
+        Array [
+          Object {
+            "field": "type",
+            "name": "Type",
+            "render": [Function],
+            "width": "50px",
+          },
+          Object {
+            "field": "id",
+            "name": "Id",
+          },
+          Object {
+            "field": "meta.title",
+            "name": "Title",
+          },
+        ]
+      }
+      items={
+        Array [
+          Object {
+            "attributes": Object {},
+            "id": "1",
+            "meta": Object {
+              "icon": "dashboardApp",
+              "title": "Dashboard_1",
+            },
+            "references": Array [],
+            "type": "dashboard",
+            "workspaces": Array [
+              "workspace1",
+            ],
+          },
+          Object {
+            "attributes": Object {},
+            "id": "2",
+            "meta": Object {
+              "icon": "visualizationApp",
+              "title": "Visualization",
+            },
+            "references": Array [],
+            "type": "visualization",
+            "workspaces": Array [
+              "workspace2",
+            ],
+          },
+          Object {
+            "attributes": Object {},
+            "id": "3",
+            "meta": Object {
+              "icon": "dashboardApp",
+              "title": "Dashboard_2",
+            },
+            "references": Array [],
+            "type": "dashboard",
+            "workspaces": Array [
+              "workspace2",
+            ],
+          },
+        ]
+      }
+      pagination={true}
+      responsive={true}
+      sorting={false}
+      tableLayout="fixed"
+    />
+  </EuiModalBody>
+  <EuiModalFooter>
+    <EuiButtonEmpty
+      data-test-subj="duplicateCancelButton"
+      onClick={[MockFunction]}
+    >
+      <FormattedMessage
+        defaultMessage="Cancel"
+        id="savedObjectsManagement.objectsTable.duplicateModal.duplicateCancelButton"
+        values={Object {}}
+      />
+    </EuiButtonEmpty>
+    <EuiButton
+      data-test-subj="duplicateConfirmButton"
+      disabled={true}
+      fill={true}
+      isLoading={false}
+      onClick={[Function]}
+    >
+      <FormattedMessage
+        defaultMessage="Duplicate{duplicateMode, select, all {({objectCount})} other {}}"
+        id="savedObjectsManagement.objectsTable.duplicateModal.confirmButtonLabel"
+        values={
+          Object {
+            "duplicateMode": "selected",
+            "objectCount": 3,
+          }
+        }
+      />
+    </EuiButton>
+  </EuiModalFooter>
+</EuiModal>
+`;
