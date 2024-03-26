@@ -126,6 +126,8 @@ export class WorkspaceClient {
           libraryReadonly: !workspaceIdsWithWritePermission.includes(workspace.id),
         }));
         this.workspaces.workspaceList$.next(workspaces);
+      } else {
+        this.workspaces.workspaceList$.next([]);
       }
     }
   }

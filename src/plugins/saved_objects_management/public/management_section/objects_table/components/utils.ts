@@ -8,6 +8,7 @@ import { WorkspaceAttribute, WorkspacesStart } from 'opensearch-dashboards/publi
 
 export type WorkspaceOption = EuiComboBoxOptionOption<WorkspaceAttribute>;
 
+// Convert workspace to option which can be displayed in the drop-down box.
 export function workspaceToOption(
   workspace: WorkspaceAttribute,
   currentWorkspaceId?: string
