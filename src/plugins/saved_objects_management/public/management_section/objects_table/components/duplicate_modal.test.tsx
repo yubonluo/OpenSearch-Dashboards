@@ -111,6 +111,13 @@ describe('DuplicateModal', () => {
     expect(component).toMatchSnapshot();
   });
 
+  it('should Unmount normally', async () => {
+    const component = shallowWithI18nProvider(
+      <SavedObjectsDuplicateModal {...selectedModeProps} />
+    );
+    expect(component.unmount()).toMatchSnapshot();
+  });
+
   it('should show all target workspace options when not in any workspace', async () => {
     workspaces.workspaceList$.next(workspaceList);
     workspaces.currentWorkspaceId$.next('');
@@ -177,16 +184,35 @@ describe('DuplicateModal', () => {
   });
 
   it('should show saved objects type when duplicate mode is all', async () => {
-    workspaces.workspaceList$.next(workspaceList);
-    workspaces.currentWorkspaceId$.next('');
-    workspaces.currentWorkspace$.next(null);
-    allModeProps = { ...allModeProps, workspaces };
     const component = shallowWithI18nProvider(<SavedObjectsDuplicateModal {...allModeProps} />);
     const savedObjectTypeInfoMap = component.state('savedObjectTypeInfoMap') as Map<
       string,
       [number, boolean]
     >;
     expect(savedObjectTypeInfoMap.get('dashboard')).toEqual([2, true]);
+
+    const euiCheckbox = component.find('EuiCheckbox').at(0);
+    expect(euiCheckbox.prop('checked')).toEqual(true);
+    expect(euiCheckbox.prop('id')).toEqual('includeSavedObjectType.dashboard');
+
+    euiCheckbox.simulate('change', { target: { checked: false } });
+    const euiCheckboxUnCheced = component.find('EuiCheckbox').at(0);
+    expect(euiCheckboxUnCheced.prop('checked')).toEqual(false);
+    expect(savedObjectTypeInfoMap.get('dashboard')).toEqual([2, false]);
+  });
+
+  it('should uncheck duplicate related objects', async () => {
+    const component = shallowWithI18nProvider(
+      <SavedObjectsDuplicateModal {...selectedModeProps} />
+    );
+
+    const euiCheckbox = component.find('EuiCheckbox').at(0);
+    expect(euiCheckbox.prop('checked')).toEqual(true);
+    expect(euiCheckbox.prop('id')).toEqual('includeReferencesDeep');
+    expect(component.state('isIncludeReferencesDeepChecked')).toEqual(true);
+
+    euiCheckbox.simulate('change', { target: { checked: false } });
+    expect(component.state('isIncludeReferencesDeepChecked')).toEqual(false);
   });
 
   it('should call onClose function when cancle button is clicked', () => {

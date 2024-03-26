@@ -213,6 +213,7 @@ describe('#WorkspaceClient', () => {
     expect(workspaceMock.workspaceList$.getValue()).toEqual([
       {
         id: 'foo',
+        libraryReadonly: false,
       },
     ]);
     expect(httpSetupMock.fetch).toBeCalledWith('/api/workspaces/_list', {

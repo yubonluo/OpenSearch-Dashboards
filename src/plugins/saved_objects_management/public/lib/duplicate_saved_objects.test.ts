@@ -17,7 +17,6 @@ describe('copy saved objects', () => {
     const targetWorkspace = '1';
     await duplicateSavedObjects(httpClient, objects, includeReferencesDeep, targetWorkspace);
     expect(httpClient.post).toMatchInlineSnapshot(
-      '',
       `
       [MockFunction] {
         "calls": Array [
