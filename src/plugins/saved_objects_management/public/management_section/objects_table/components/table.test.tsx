@@ -38,7 +38,6 @@ import { columnServiceMock } from '../../../services/column_service.mock';
 import { SavedObjectsManagementAction } from '../../..';
 import { Table, TableProps } from './table';
 import { WorkspaceAttribute } from 'opensearch-dashboards/public';
-import { render } from '@testing-library/react';
 
 const defaultProps: TableProps = {
   basePath: httpServiceMock.createSetupContract().basePath,
