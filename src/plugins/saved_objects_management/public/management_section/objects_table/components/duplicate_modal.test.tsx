@@ -17,6 +17,7 @@ import { SavedObjectWithMetadata } from '../../../types';
 import { shallowWithI18nProvider } from 'test_utils/enzyme_helpers';
 import React from 'react';
 import { WorkspaceObject } from 'src/core/types';
+import { render } from '@testing-library/react';
 import { WorkspaceOption } from './utils';
 
 interface Props extends ShowDuplicateModalProps {
@@ -60,7 +61,6 @@ describe('DuplicateModal', () => {
       references: [],
       meta: {
         title: 'Dashboard_2',
-        icon: 'dashboardApp',
       },
     },
   ];
@@ -101,14 +101,8 @@ describe('DuplicateModal', () => {
   });
 
   it('should render normally', async () => {
-    const component = shallowWithI18nProvider(
-      <SavedObjectsDuplicateModal {...selectedModeProps} />
-    );
-    // Ensure all promises resolve
-    await new Promise((resolve) => process.nextTick(resolve));
-    // Ensure the state changes are reflected
-    component.update();
-    expect(component).toMatchSnapshot();
+    render(<SavedObjectsDuplicateModal {...allModeProps} />);
+    expect(document.children).toMatchSnapshot();
   });
 
   it('should Unmount normally', async () => {
@@ -183,6 +177,23 @@ describe('DuplicateModal', () => {
     expect(component.find('EuiCallOut').prop('aria-disabled')).toEqual(false);
   });
 
+  it('should ignore one saved object when target workspace is workspace1', async () => {
+    workspaces.workspaceList$.next(workspaceList);
+    workspaces.currentWorkspaceId$.next('');
+    workspaces.currentWorkspace$.next(null);
+    selectedModeProps = { ...selectedModeProps, workspaces };
+    const component = shallowWithI18nProvider(
+      <SavedObjectsDuplicateModal {...selectedModeProps} />
+    );
+    const comboBox = component.find('EuiComboBox');
+    comboBox.simulate('change', [{ label: 'foo', key: 'workspace1', value: workspaceList[0] }]);
+
+    const includedSelectedObjects = component
+      .find('EuiInMemoryTable')
+      .prop('items') as SavedObjectWithMetadata[];
+    expect(includedSelectedObjects.length).toEqual(2);
+  });
+
   it('should show saved objects type when duplicate mode is all', async () => {
     const component = shallowWithI18nProvider(<SavedObjectsDuplicateModal {...allModeProps} />);
     const savedObjectTypeInfoMap = component.state('savedObjectTypeInfoMap') as Map<
@@ -199,6 +210,8 @@ describe('DuplicateModal', () => {
     const euiCheckboxUnCheced = component.find('EuiCheckbox').at(0);
     expect(euiCheckboxUnCheced.prop('checked')).toEqual(false);
     expect(savedObjectTypeInfoMap.get('dashboard')).toEqual([2, false]);
+
+    (component.instance() as any).changeIncludeSavedObjectType('invalid');
   });
 
   it('should uncheck duplicate related objects', async () => {
@@ -238,5 +251,18 @@ describe('DuplicateModal', () => {
     expect(confirmButton.prop('disabled')).toBe(false);
     confirmButton.simulate('click');
     expect(selectedModeProps.onDuplicate).toHaveBeenCalled();
+  });
+
+  it('should not change isLoading when isMounted is false ', async () => {
+    const component = shallowWithI18nProvider(
+      <SavedObjectsDuplicateModal {...selectedModeProps} />
+    );
+    const comboBox = component.find('EuiComboBox');
+    comboBox.simulate('change', [{ label: 'bar', key: 'workspace2', value: workspaceList[1] }]);
+    const confirmButton = component.find('[data-test-subj="duplicateConfirmButton"]');
+    (component.instance() as any).isMounted = false;
+    confirmButton.simulate('click');
+    expect(selectedModeProps.onDuplicate).toHaveBeenCalled();
+    expect(component.state('isLoading')).toBe(true);
   });
 });

@@ -278,4 +278,28 @@ describe('#WorkspaceClient', () => {
     });
     expect(workspaceMock.workspaceList$.getValue()).toEqual([]);
   });
+
+  it('#init with resultWithWritePermission is not success ', async () => {
+    const { workspaceClient, httpSetupMock, workspaceMock } = getWorkspaceClient();
+    httpSetupMock.fetch
+      .mockResolvedValueOnce({
+        success: true,
+        result: {
+          workspaces: [
+            {
+              id: 'foo',
+              name: 'foo',
+            },
+          ],
+          total: 1,
+          per_page: 999,
+          page: 1,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+      });
+    await workspaceClient.init();
+    expect(workspaceMock.workspaceList$.getValue()).toEqual([]);
+  });
 });

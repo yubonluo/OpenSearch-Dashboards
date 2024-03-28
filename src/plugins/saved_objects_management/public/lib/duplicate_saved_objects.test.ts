@@ -16,8 +16,7 @@ describe('copy saved objects', () => {
     const includeReferencesDeep = true;
     const targetWorkspace = '1';
     await duplicateSavedObjects(httpClient, objects, includeReferencesDeep, targetWorkspace);
-    expect(httpClient.post).toMatchInlineSnapshot(
-      `
+    expect(httpClient.post).toMatchInlineSnapshot(`
       [MockFunction] {
         "calls": Array [
           Array [
@@ -34,7 +33,36 @@ describe('copy saved objects', () => {
           },
         ],
       }
-    `
-    );
+    `);
+
+    await duplicateSavedObjects(httpClient, objects, undefined, targetWorkspace);
+    expect(httpClient.post).toMatchInlineSnapshot(`
+      [MockFunction] {
+        "calls": Array [
+          Array [
+            "/api/saved_objects/_copy",
+            Object {
+              "body": "{\\"objects\\":[{\\"type\\":\\"dashboard\\",\\"id\\":\\"1\\"},{\\"type\\":\\"visualization\\",\\"id\\":\\"2\\"}],\\"includeReferencesDeep\\":true,\\"targetWorkspace\\":\\"1\\"}",
+            },
+          ],
+          Array [
+            "/api/saved_objects/_copy",
+            Object {
+              "body": "{\\"objects\\":[{\\"type\\":\\"dashboard\\",\\"id\\":\\"1\\"},{\\"type\\":\\"visualization\\",\\"id\\":\\"2\\"}],\\"includeReferencesDeep\\":true,\\"targetWorkspace\\":\\"1\\"}",
+            },
+          ],
+        ],
+        "results": Array [
+          Object {
+            "type": "return",
+            "value": undefined,
+          },
+          Object {
+            "type": "return",
+            "value": undefined,
+          },
+        ],
+      }
+    `);
   });
 });

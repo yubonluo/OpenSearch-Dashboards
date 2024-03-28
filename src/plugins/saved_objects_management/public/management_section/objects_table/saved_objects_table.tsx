@@ -679,82 +679,78 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
     );
   }
 
-  showDuplicateModal = () => {
-    this.setState({ isShowingDuplicateModal: true });
-  };
-
   hideDuplicateModal = () => {
     this.setState({ isShowingDuplicateModal: false });
   };
 
+  onDuplicate = async (
+    savedObjects: SavedObjectWithMetadata[],
+    includeReferencesDeep: boolean,
+    targetWorkspace: string
+  ) => {
+    const { http, notifications } = this.props;
+    const objectsToDuplicate = savedObjects.map((obj) => ({ id: obj.id, type: obj.type }));
+    let result;
+    try {
+      result = await duplicateSavedObjects(
+        http,
+        objectsToDuplicate,
+        includeReferencesDeep,
+        targetWorkspace
+      );
+      if (result.success) {
+        notifications.toasts.addSuccess({
+          title: i18n.translate(
+            'savedObjectsManagement.objectsTable.duplicate.successNotification',
+            {
+              defaultMessage:
+                'Duplicate ' + savedObjects.length.toString() + ' saved objects successfully',
+            }
+          ),
+        });
+      } else {
+        const errorIdMessages = result.errors
+          ? ' These objects cannot be duplicated:' +
+            result.errors.map((item: { id: string }) => item.id).join(', ')
+          : '';
+        notifications.toasts.addDanger({
+          title: i18n.translate(
+            'savedObjectsManagement.objectsTable.duplicate.dangerNotification',
+            {
+              defaultMessage:
+                'Unable to duplicate ' +
+                savedObjects.length.toString() +
+                ' saved objects.' +
+                errorIdMessages,
+            }
+          ),
+        });
+      }
+    } catch (e) {
+      notifications.toasts.addDanger({
+        title: i18n.translate('savedObjectsManagement.objectsTable.duplicate.dangerNotification', {
+          defaultMessage:
+            'Unable to duplicate ' + savedObjects.length.toString() + ' saved objects',
+        }),
+      });
+    }
+    this.hideDuplicateModal();
+    await this.refreshObjects();
+  };
+
   renderDuplicateModal() {
-    const { workspaces, http, notifications } = this.props;
     const { isShowingDuplicateModal, duplicateSelectedSavedObjects, duplicateMode } = this.state;
 
     if (!isShowingDuplicateModal) {
       return null;
     }
 
-    const onDuplicate = async (
-      savedObjects: SavedObjectWithMetadata[],
-      includeReferencesDeep: boolean,
-      targetWorkspace: string
-    ) => {
-      const objectsToDuplicate = savedObjects.map((obj) => ({ id: obj.id, type: obj.type }));
-      let result;
-      try {
-        result = await duplicateSavedObjects(
-          http,
-          objectsToDuplicate,
-          includeReferencesDeep,
-          targetWorkspace
-        );
-        if (result.success) {
-          notifications.toasts.addSuccess({
-            title: i18n.translate(
-              'savedObjectsManagement.objectsTable.duplicate.successNotification',
-              {
-                defaultMessage:
-                  'Duplicate ' + savedObjects.length.toString() + ' saved objects successfully',
-              }
-            ),
-          });
-        } else {
-          const errorIdMessages = result.errors
-            ? 'These objects cannot be duplicated:' +
-              result.errors.map((item: { id: string }) => item.id).join(',')
-            : '';
-          notifications.toasts.addDanger({
-            title: i18n.translate(
-              'savedObjectsManagement.objectsTable.duplicate.dangerNotification',
-              {
-                defaultMessage:
-                  'Unable to duplicate ' + savedObjects.length.toString() + errorIdMessages,
-              }
-            ),
-          });
-        }
-      } catch (e) {
-        notifications.toasts.addDanger({
-          title: i18n.translate(
-            'savedObjectsManagement.objectsTable.duplicate.dangerNotification',
-            {
-              defaultMessage:
-                'Unable to duplicate ' + savedObjects.length.toString() + ' saved objects',
-            }
-          ),
-        });
-      }
-      this.hideDuplicateModal();
-      await this.refreshObjects();
-    };
-
     return (
       <SavedObjectsDuplicateModal
-        http={http}
-        workspaces={workspaces}
-        onDuplicate={onDuplicate}
-        notifications={notifications}
+        http={this.props.http}
+        workspaces={this.props.workspaces}
+        onDuplicate={this.onDuplicate}
+        notifications={this.props.notifications}
         duplicateMode={duplicateMode}
         onClose={this.hideDuplicateModal}
         selectedSavedObjects={duplicateSelectedSavedObjects}

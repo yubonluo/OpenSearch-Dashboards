@@ -38,6 +38,7 @@ import { columnServiceMock } from '../../../services/column_service.mock';
 import { SavedObjectsManagementAction } from '../../..';
 import { Table, TableProps } from './table';
 import { WorkspaceAttribute } from 'opensearch-dashboards/public';
+import { render } from '@testing-library/react';
 
 const defaultProps: TableProps = {
   basePath: httpServiceMock.createSetupContract().basePath,
@@ -107,6 +108,9 @@ const defaultProps: TableProps = {
   isSearching: false,
   onShowRelationships: () => {},
   canDelete: true,
+  onDuplicateSelected: () => {},
+  onDuplicateSingle: () => {},
+  showDuplicate: false,
 };
 
 describe('Table', () => {
@@ -221,5 +225,24 @@ describe('Table', () => {
     expect(onActionRefresh).not.toHaveBeenCalled();
     someAction.onClick();
     expect(onActionRefresh).toHaveBeenCalled();
+  });
+
+  it('should call onDuplicateSingle when show duplicate', () => {
+    const onDuplicateSingle = jest.fn();
+    const showDuplicate = true;
+    const customizedProps = { ...defaultProps, onDuplicateSingle, showDuplicate };
+    const component = shallowWithI18nProvider(<Table {...customizedProps} />);
+    expect(component).toMatchSnapshot();
+
+    const table = component.find('EuiBasicTable');
+    const columns = table.prop('columns') as any[];
+    const actionColumn = columns.find((x) => x.hasOwnProperty('actions')) as { actions: any[] };
+    const duplicateAction = actionColumn.actions.find(
+      (x) => x['data-test-subj'] === 'savedObjectsTableAction-duplicate'
+    );
+
+    expect(onDuplicateSingle).not.toHaveBeenCalled();
+    duplicateAction.onClick();
+    expect(onDuplicateSingle).toHaveBeenCalled();
   });
 });

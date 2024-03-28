@@ -31,6 +31,7 @@
 import React from 'react';
 import { shallow } from 'enzyme';
 import { Header } from './header';
+import { any } from 'bluebird';
 
 describe('Header', () => {
   it('should render normally', () => {
@@ -43,6 +44,23 @@ describe('Header', () => {
       objectCount: 4,
       filteredCount: 2,
       showDuplicateAll: false,
+    };
+
+    const component = shallow(<Header {...props} />);
+
+    expect(component).toMatchSnapshot();
+  });
+
+  it('should render normally when showDuplicateAll is undefined', () => {
+    const props = {
+      onExportAll: () => {},
+      onImport: () => {},
+      onRefresh: () => {},
+      onDuplicate: () => {},
+      title: 'Saved Objects',
+      objectCount: 4,
+      filteredCount: 2,
+      showDuplicateAll: undefined,
     };
 
     const component = shallow(<Header {...props} />);
