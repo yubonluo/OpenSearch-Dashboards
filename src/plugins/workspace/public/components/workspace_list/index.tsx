@@ -26,6 +26,8 @@ import { WORKSPACE_CREATE_APP_ID } from '../../../common/constants';
 
 import { cleanWorkspaceId } from '../../../../../core/public';
 import { DeleteWorkspaceModal } from '../delete_workspace_modal';
+import { useApplications } from '././../../hooks';
+import { getSelectedFeatureQuantities } from '../../utils';
 
 const WORKSPACE_LIST_PAGE_DESCRIPTIOIN = i18n.translate('workspace.list.description', {
   defaultMessage:
@@ -47,6 +49,7 @@ export const WorkspaceList = () => {
     pageSizeOptions: [5, 10, 20],
   });
   const [deletedWorkspace, setDeletedWorkspace] = useState<WorkspaceAttribute | null>(null);
+  const applications = useApplications(application);
 
   const handleSwitchWorkspace = useCallback(
     (id: string) => {
@@ -106,6 +109,10 @@ export const WorkspaceList = () => {
       name: 'Features',
       isExpander: true,
       hasActions: true,
+      render: (features: string[]) => {
+        const { total, selected } = getSelectedFeatureQuantities(features, applications);
+        return `${selected}/${total}`;
+      },
     },
     {
       name: 'Actions',
