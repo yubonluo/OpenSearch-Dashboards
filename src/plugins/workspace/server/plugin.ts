@@ -96,12 +96,8 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
           const configClient = applicationConfig.getConfigurationClient(scopeClient);
 
           const [adminGroups, adminUsers] = await Promise.all([
-            configClient.getEntityConfig('workspace.dashboardAdmin.groups').catch(() => {
-              return undefined;
-            }),
-            configClient.getEntityConfig('workspace.dashboardAdmin.users').catch(() => {
-              return undefined;
-            }),
+            configClient.getEntityConfig('workspace.dashboardAdmin.groups').catch(() => undefined),
+            configClient.getEntityConfig('workspace.dashboardAdmin.users').catch(() => undefined),
           ]);
 
           const isDashboardAdmin = isRequestByDashboardAdmin(
