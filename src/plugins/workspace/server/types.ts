@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ApplicationConfigPluginSetup } from 'src/plugins/application_config/server';
 import {
   Logger,
   OpenSearchDashboardsRequest,
@@ -132,3 +133,7 @@ export type WorkspacePermissionItem = {
     | WorkspacePermissionMode.Write
   >;
 } & ({ type: 'user'; userId: string } | { type: 'group'; group: string });
+
+export interface AppPluginSetupDependencies {
+  applicationConfig: ApplicationConfigPluginSetup;
+}

@@ -7,6 +7,7 @@ import { i18n } from '@osd/i18n';
 import { Observable } from 'rxjs';
 import { first } from 'rxjs/operators';
 
+import { getWorkspaceState } from '../../../../core/server/utils';
 import {
   OpenSearchDashboardsRequest,
   SavedObject,
@@ -67,6 +68,29 @@ const intersection = <T extends string>(...args: T[][]) => {
 
 const getDefaultValuesForEmpty = <T>(values: T[] | undefined, defaultValues: T[]) => {
   return !values || values.length === 0 ? defaultValues : values;
+};
+
+export const isRequestByDashboardAdmin = (
+  request: OpenSearchDashboardsRequest,
+  adminGroups: string[],
+  adminUsers: string[],
+  permissionControl: SavedObjectsPermissionControlContract
+): boolean => {
+  if (adminGroups.length === 0 && adminUsers.length === 0) return false;
+
+  let groups: string[];
+  let users: string[];
+
+  // There may be calls to saved objects client before user get authenticated, need to add a try catch here as `getPrincipalsFromRequest` will throw error when user is not authenticated.
+  try {
+    ({ groups = [], users = [] } = permissionControl.getPrincipalsFromRequest(request));
+  } catch (e) {
+    return false;
+  }
+
+  const groupMatchAny = groups.some((group) => adminGroups.includes(group)) || false;
+  const userMatchAny = users.some((user) => adminUsers.includes(user)) || false;
+  return groupMatchAny || userMatchAny;
 };
 
 export class WorkspaceSavedObjectsClientWrapper {
@@ -143,24 +167,6 @@ export class WorkspaceSavedObjectsClientWrapper {
     }
     return false;
   };
-
-  private isRequestByDashboardAdmin(request: OpenSearchDashboardsRequest): boolean {
-    const config = this.config || ({} as WorkspacePluginConfigType);
-    let groups: string[];
-    let users: string[];
-
-    // There may be calls to saved objects client before user get authenticated, need to add a try catch here as `getPrincipalsFromRequest` will throw error when user is not authenticated.
-    try {
-      ({ groups = [], users = [] } = this.permissionControl.getPrincipalsFromRequest(request));
-    } catch (e) {
-      return false;
-    }
-    const adminGroups = config.dashboardAdmin?.groups || [];
-    const adminUsers = config.dashboardAdmin?.users || [];
-    const groupMatchAny = groups.some((group) => adminGroups.includes(group)) || false;
-    const userMatchAny = users.some((user) => adminUsers.includes(user)) || false;
-    return groupMatchAny || userMatchAny;
-  }
 
   /**
    * check if the type include workspace
@@ -549,7 +555,21 @@ export class WorkspaceSavedObjectsClientWrapper {
       return await wrapperOptions.client.deleteByWorkspace(workspace, options);
     };
 
-    const isDashboardAdmin = this.isRequestByDashboardAdmin(wrapperOptions.request);
+    let isDashboardAdmin: boolean = false;
+    if (this.applicationConfig) {
+      const workspaceState = getWorkspaceState(wrapperOptions.request);
+      isDashboardAdmin = workspaceState?.isDashboardAdmin || false;
+    } else {
+      const config = this.config || ({} as WorkspacePluginConfigType);
+      const adminGroups = config.dashboardAdmin?.groups || [];
+      const adminUsers = config.dashboardAdmin?.users || [];
+      isDashboardAdmin = isRequestByDashboardAdmin(
+        wrapperOptions.request,
+        adminGroups,
+        adminUsers,
+        this.permissionControl
+      );
+    }
 
     if (isDashboardAdmin) {
       return wrapperOptions.client;
@@ -577,7 +597,8 @@ export class WorkspaceSavedObjectsClientWrapper {
     private readonly permissionControl: SavedObjectsPermissionControlContract,
     private readonly options: {
       config$: Observable<WorkspacePluginConfigType>;
-    }
+    },
+    private readonly applicationConfig: boolean
   ) {
     this.options?.config$.subscribe((config) => {
       this.config = config;

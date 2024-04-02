@@ -16,17 +16,22 @@ import {
   WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
   WORKSPACE_CONFLICT_CONTROL_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
 } from '../common/constants';
-import { IWorkspaceClientImpl } from './types';
+import { AppPluginSetupDependencies, IWorkspaceClientImpl } from './types';
 import { WorkspaceClient } from './workspace_client';
 import { registerRoutes } from './routes';
 import { WorkspaceSavedObjectsClientWrapper } from './saved_objects';
-import { cleanWorkspaceId, getWorkspaceIdFromUrl } from '../../../core/server/utils';
+import {
+  cleanWorkspaceId,
+  getWorkspaceIdFromUrl,
+  updateWorkspaceState,
+} from '../../../core/server/utils';
 import { WorkspaceConflictSavedObjectsClientWrapper } from './saved_objects/saved_objects_wrapper_for_check_workspace_conflict';
 import {
   SavedObjectsPermissionControl,
   SavedObjectsPermissionControlContract,
 } from './permission_control/client';
 import { WorkspacePluginConfigType } from '../config';
+import { isRequestByDashboardAdmin } from './saved_objects/workspace_saved_objects_client_wrapper';
 
 export class WorkspacePlugin implements Plugin<{}, {}> {
   private readonly logger: Logger;
@@ -60,7 +65,7 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
     this.config$ = initializerContext.config.create<WorkspacePluginConfigType>();
   }
 
-  public async setup(core: CoreSetup) {
+  public async setup(core: CoreSetup, { applicationConfig }: AppPluginSetupDependencies) {
     this.logger.debug('Setting up Workspaces service');
     const config: WorkspacePluginConfigType = await this.config$.pipe(first()).toPromise();
     const isPermissionControlEnabled =
@@ -83,9 +88,39 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
     if (isPermissionControlEnabled) {
       this.permissionControl = new SavedObjectsPermissionControl(this.logger);
 
+      this.logger.info('Dynamic application configuration enabled:' + !!applicationConfig);
+      if (!!applicationConfig) {
+        core.http.registerOnPostAuth(async (request, response, toolkit) => {
+          const [coreStart] = await core.getStartServices();
+          const scopeClient = coreStart.opensearch.client.asScoped(request);
+          const configClient = applicationConfig.getConfigurationClient(scopeClient);
+
+          const [adminGroups, adminUsers] = await Promise.all([
+            configClient.getEntityConfig('workspace.dashboardAdmin.groups').catch(() => {
+              return undefined;
+            }),
+            configClient.getEntityConfig('workspace.dashboardAdmin.users').catch(() => {
+              return undefined;
+            }),
+          ]);
+
+          const isDashboardAdmin = isRequestByDashboardAdmin(
+            request,
+            adminGroups ? [adminGroups] : [],
+            adminUsers ? [adminUsers] : [],
+            this.permissionControl!
+          );
+          updateWorkspaceState(request, {
+            isDashboardAdmin,
+          });
+          return toolkit.next();
+        });
+      }
+
       this.workspaceSavedObjectsClientWrapper = new WorkspaceSavedObjectsClientWrapper(
         this.permissionControl,
-        { config$: this.config$ }
+        { config$: this.config$ },
+        !!applicationConfig
       );
 
       core.savedObjects.addClientWrapper(

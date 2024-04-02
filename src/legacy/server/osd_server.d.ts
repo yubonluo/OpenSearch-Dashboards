@@ -64,6 +64,7 @@ declare module '@hapi/hapi' {
   interface PluginsStates {
     workspace?: {
       id?: string;
+      isDashboardAdmin?: boolean;
     };
   }
 }
