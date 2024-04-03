@@ -11,9 +11,11 @@ describe('updateWorkspaceState', () => {
     const requestMock = httpServerMock.createOpenSearchDashboardsRequest();
     updateWorkspaceState(requestMock, {
       id: 'foo',
+      isDashboardAdmin: true,
     });
     expect(getWorkspaceState(requestMock)).toEqual({
       id: 'foo',
+      isDashboardAdmin: true,
     });
   });
 });

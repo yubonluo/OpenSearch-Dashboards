@@ -52,7 +52,7 @@ export const getPrincipalsFromRequest = (
   throw new Error('UNEXPECTED_AUTHORIZATION_STATUS');
 };
 
-export const isRequestByDashboardAdmin = (
+export const updateDashboardAdminStateForRequest = (
   request: OpenSearchDashboardsRequest,
   groups: string[],
   users: string[],

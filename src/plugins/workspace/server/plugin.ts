@@ -11,7 +11,6 @@ import {
   Plugin,
   Logger,
   CoreStart,
-  OpenSearchDashboardsRequest,
 } from '../../../core/server';
 import {
   WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
@@ -32,7 +31,7 @@ import {
   SavedObjectsPermissionControlContract,
 } from './permission_control/client';
 import { WorkspacePluginConfigType } from '../config';
-import { isRequestByDashboardAdmin } from './utils';
+import { updateDashboardAdminStateForRequest } from './utils';
 
 export class WorkspacePlugin implements Plugin<{}, {}> {
   private readonly logger: Logger;
@@ -63,7 +62,6 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
 
   private async setupPermission(
     core: CoreSetup,
-    config: WorkspacePluginConfigType,
     { applicationConfig }: AppPluginSetupDependencies
   ) {
     this.permissionControl = new SavedObjectsPermissionControl(this.logger);
@@ -100,7 +98,7 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
             .catch(() => undefined),
         ]);
 
-        isRequestByDashboardAdmin(
+        updateDashboardAdminStateForRequest(
           request,
           groups,
           users,
@@ -110,9 +108,10 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
         return toolkit.next();
       }
 
+      const config: WorkspacePluginConfigType = await this.config$.pipe(first()).toPromise();
       const configGroups = config.dashboardAdmin.groups || [];
       const configUsers = config.dashboardAdmin.users || [];
-      isRequestByDashboardAdmin(request, groups, users, configGroups, configUsers);
+      updateDashboardAdminStateForRequest(request, groups, users, configGroups, configUsers);
       return toolkit.next();
     });
 
@@ -152,7 +151,7 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
     );
 
     this.logger.info('Workspace permission control enabled:' + isPermissionControlEnabled);
-    if (isPermissionControlEnabled) this.setupPermission(core, config, { applicationConfig });
+    if (isPermissionControlEnabled) await this.setupPermission(core, { applicationConfig });
 
     registerRoutes({
       http: core.http,

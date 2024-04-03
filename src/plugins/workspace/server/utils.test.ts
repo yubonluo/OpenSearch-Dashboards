@@ -5,7 +5,11 @@
 
 import { AuthStatus } from '../../../core/server';
 import { httpServerMock, httpServiceMock } from '../../../core/server/mocks';
-import { generateRandomId, getPrincipalsFromRequest, isRequestByDashboardAdmin } from './utils';
+import {
+  generateRandomId,
+  getPrincipalsFromRequest,
+  updateDashboardAdminStateForRequest,
+} from './utils';
 import { getWorkspaceState } from '../../../core/server/utils';
 
 describe('workspace utils', () => {
@@ -81,7 +85,7 @@ describe('workspace utils', () => {
     const users: string[] = [];
     const configGroups: string[] = ['dashboard_admin'];
     const configUsers: string[] = [];
-    isRequestByDashboardAdmin(mockRequest, groups, users, configGroups, configUsers);
+    updateDashboardAdminStateForRequest(mockRequest, groups, users, configGroups, configUsers);
     expect(getWorkspaceState(mockRequest)?.isDashboardAdmin).toBe(true);
   });
 
@@ -91,7 +95,7 @@ describe('workspace utils', () => {
     const users: string[] = ['dashboard_admin'];
     const configGroups: string[] = [];
     const configUsers: string[] = ['dashboard_admin'];
-    isRequestByDashboardAdmin(mockRequest, groups, users, configGroups, configUsers);
+    updateDashboardAdminStateForRequest(mockRequest, groups, users, configGroups, configUsers);
     expect(getWorkspaceState(mockRequest)?.isDashboardAdmin).toBe(true);
   });
 
@@ -101,7 +105,7 @@ describe('workspace utils', () => {
     const users: string[] = [];
     const configGroups: string[] = [];
     const configUsers: string[] = ['dashboard_admin'];
-    isRequestByDashboardAdmin(mockRequest, groups, users, configGroups, configUsers);
+    updateDashboardAdminStateForRequest(mockRequest, groups, users, configGroups, configUsers);
     expect(getWorkspaceState(mockRequest)?.isDashboardAdmin).toBe(false);
   });
 });
