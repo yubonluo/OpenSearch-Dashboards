@@ -32,6 +32,7 @@ import {
   SavedObjectsPermissionControlContract,
 } from './permission_control/client';
 import { WorkspacePluginConfigType } from '../config';
+import { isRequestByDashboardAdmin } from './utils';
 
 export class WorkspacePlugin implements Plugin<{}, {}> {
   private readonly logger: Logger;
@@ -57,26 +58,6 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
         return toolkit.rewriteUrl(requestUrl.toString());
       }
       return toolkit.next();
-    });
-  }
-
-  private isRequestByDashboardAdmin(
-    request: OpenSearchDashboardsRequest,
-    groups: string[],
-    users: string[],
-    configGroups: string[],
-    configUsers: string[]
-  ) {
-    if (configGroups.length === 0 && configUsers.length === 0) {
-      updateWorkspaceState(request, {
-        isDashboardAdmin: false,
-      });
-      return;
-    }
-    const groupMatchAny = groups.some((group) => configGroups.includes(group)) || false;
-    const userMatchAny = users.some((user) => configUsers.includes(user)) || false;
-    updateWorkspaceState(request, {
-      isDashboardAdmin: groupMatchAny || userMatchAny,
     });
   }
 
@@ -119,7 +100,7 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
             .catch(() => undefined),
         ]);
 
-        this.isRequestByDashboardAdmin(
+        isRequestByDashboardAdmin(
           request,
           groups,
           users,
@@ -131,7 +112,7 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
 
       const configGroups = config.dashboardAdmin.groups || [];
       const configUsers = config.dashboardAdmin.users || [];
-      this.isRequestByDashboardAdmin(request, groups, users, configGroups, configUsers);
+      isRequestByDashboardAdmin(request, groups, users, configGroups, configUsers);
       return toolkit.next();
     });
 

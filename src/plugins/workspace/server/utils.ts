@@ -12,6 +12,7 @@ import {
   PrincipalType,
 } from '../../../core/server';
 import { AuthInfo } from './types';
+import { updateWorkspaceState } from '../../../core/server/utils';
 
 /**
  * Generate URL friendly random ID
@@ -49,4 +50,24 @@ export const getPrincipalsFromRequest = (
   }
 
   throw new Error('UNEXPECTED_AUTHORIZATION_STATUS');
+};
+
+export const isRequestByDashboardAdmin = (
+  request: OpenSearchDashboardsRequest,
+  groups: string[],
+  users: string[],
+  configGroups: string[],
+  configUsers: string[]
+) => {
+  if (configGroups.length === 0 && configUsers.length === 0) {
+    updateWorkspaceState(request, {
+      isDashboardAdmin: false,
+    });
+    return;
+  }
+  const groupMatchAny = groups.some((group) => configGroups.includes(group)) || false;
+  const userMatchAny = users.some((user) => configUsers.includes(user)) || false;
+  updateWorkspaceState(request, {
+    isDashboardAdmin: groupMatchAny || userMatchAny,
+  });
 };
