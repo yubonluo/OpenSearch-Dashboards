@@ -10,14 +10,6 @@ export const configSchema = schema.object({
   permission: schema.object({
     enabled: schema.boolean({ defaultValue: true }),
   }),
-  dashboardAdmin: schema.object({
-    groups: schema.arrayOf(schema.string(), {
-      defaultValue: [],
-    }),
-    users: schema.arrayOf(schema.string(), {
-      defaultValue: [],
-    }),
-  }),
 });
 
 export type WorkspacePluginConfigType = TypeOf<typeof configSchema>;

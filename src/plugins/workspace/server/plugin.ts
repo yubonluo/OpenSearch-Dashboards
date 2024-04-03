@@ -11,6 +11,7 @@ import {
   Plugin,
   Logger,
   CoreStart,
+  SharedGlobalConfig,
 } from '../../../core/server';
 import {
   WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
@@ -39,6 +40,7 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
   private workspaceConflictControl?: WorkspaceConflictSavedObjectsClientWrapper;
   private permissionControl?: SavedObjectsPermissionControlContract;
   private readonly config$: Observable<WorkspacePluginConfigType>;
+  private readonly globalConfig$: Observable<SharedGlobalConfig>;
   private workspaceSavedObjectsClientWrapper?: WorkspaceSavedObjectsClientWrapper;
 
   private proxyWorkspaceTrafficToRealHandler(setupDeps: CoreSetup) {
@@ -108,9 +110,11 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
         return toolkit.next();
       }
 
-      const config: WorkspacePluginConfigType = await this.config$.pipe(first()).toPromise();
-      const configGroups = config.dashboardAdmin.groups || [];
-      const configUsers = config.dashboardAdmin.users || [];
+      const globalConfig: SharedGlobalConfig = await this.globalConfig$.pipe(first()).toPromise();
+      const configGroups = (globalConfig.opensearchDashboards.dashboardAdmin.groups ||
+        []) as string[];
+      const configUsers = (globalConfig.opensearchDashboards.dashboardAdmin.users ||
+        []) as string[];
       updateDashboardAdminStateForRequest(request, groups, users, configGroups, configUsers);
       return toolkit.next();
     });
@@ -129,6 +133,7 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
   constructor(initializerContext: PluginInitializerContext) {
     this.logger = initializerContext.logger.get('plugins', 'workspace');
     this.config$ = initializerContext.config.create<WorkspacePluginConfigType>();
+    this.globalConfig$ = initializerContext.config.legacy.globalConfig$;
   }
 
   public async setup(core: CoreSetup, { applicationConfig }: AppPluginSetupDependencies) {
