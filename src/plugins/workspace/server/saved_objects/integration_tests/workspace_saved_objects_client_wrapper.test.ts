@@ -17,6 +17,7 @@ import {
 } from '../../../../../core/server';
 import { httpServerMock } from '../../../../../../src/core/server/mocks';
 import * as utilsExports from '../../utils';
+import { updateWorkspaceState } from '../../../../../core/server/utils';
 
 const repositoryKit = (() => {
   const savedObjects: Array<{ type: string; id: string }> = [];
@@ -51,8 +52,7 @@ const repositoryKit = (() => {
 
 const permittedRequest = httpServerMock.createOpenSearchDashboardsRequest();
 const notPermittedRequest = httpServerMock.createOpenSearchDashboardsRequest();
-const groupIsDashboardAdminRequest = httpServerMock.createOpenSearchDashboardsRequest();
-const UserIdIsDashboardAdminRequest = httpServerMock.createOpenSearchDashboardsRequest();
+const dashboardAdminRequest = httpServerMock.createOpenSearchDashboardsRequest();
 
 describe('WorkspaceSavedObjectsClientWrapper', () => {
   let internalSavedObjectsRepository: ISavedObjectsRepository;
@@ -61,8 +61,7 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
   let osd: TestOpenSearchDashboardsUtils;
   let permittedSavedObjectedClient: SavedObjectsClientContract;
   let notPermittedSavedObjectedClient: SavedObjectsClientContract;
-  let groupIsDashboardAdminSavedObjectedClient: SavedObjectsClientContract;
-  let UserIdIsdashboardAdminSavedObjectedClient: SavedObjectsClientContract;
+  let dashboardAdminSavedObjectedClient: SavedObjectsClientContract;
 
   beforeAll(async function () {
     servers = createTestServers({
@@ -132,20 +131,16 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
 
     jest.spyOn(utilsExports, 'getPrincipalsFromRequest').mockImplementation((request) => {
       if (request === notPermittedRequest) return { users: ['bar'] };
-      else if (request === permittedRequest) return { users: ['foo'] };
-      else if (request === groupIsDashboardAdminRequest) return { groups: ['dashboard_admin'] };
-      return { users: ['dashboard_admin'] };
+      else return { users: ['foo'] };
     });
 
     permittedSavedObjectedClient = osd.coreStart.savedObjects.getScopedClient(permittedRequest);
     notPermittedSavedObjectedClient = osd.coreStart.savedObjects.getScopedClient(
       notPermittedRequest
     );
-    groupIsDashboardAdminSavedObjectedClient = osd.coreStart.savedObjects.getScopedClient(
-      groupIsDashboardAdminRequest
-    );
-    UserIdIsdashboardAdminSavedObjectedClient = osd.coreStart.savedObjects.getScopedClient(
-      UserIdIsDashboardAdminRequest
+    updateWorkspaceState(dashboardAdminRequest, { isDashboardAdmin: true });
+    dashboardAdminSavedObjectedClient = osd.coreStart.savedObjects.getScopedClient(
+      dashboardAdminRequest
     );
   });
 
@@ -187,41 +182,14 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       ).toBeUndefined();
     });
 
-    it('should return consistent dashboard when groups match dashboard admin', async () => {
+    it('should return consistent dashboard when groups/users is dashboard admin', async () => {
       expect(
-        (
-          await groupIsDashboardAdminSavedObjectedClient.get(
-            'dashboard',
-            'inner-workspace-dashboard-1'
-          )
-        ).error
+        (await dashboardAdminSavedObjectedClient.get('dashboard', 'inner-workspace-dashboard-1'))
+          .error
       ).toBeUndefined();
       expect(
-        (
-          await groupIsDashboardAdminSavedObjectedClient.get(
-            'dashboard',
-            'acl-controlled-dashboard-2'
-          )
-        ).error
-      ).toBeUndefined();
-    });
-
-    it('should return consistent dashboard when user ids match dashboard admin', async () => {
-      expect(
-        (
-          await UserIdIsdashboardAdminSavedObjectedClient.get(
-            'dashboard',
-            'inner-workspace-dashboard-1'
-          )
-        ).error
-      ).toBeUndefined();
-      expect(
-        (
-          await UserIdIsdashboardAdminSavedObjectedClient.get(
-            'dashboard',
-            'acl-controlled-dashboard-2'
-          )
-        ).error
+        (await dashboardAdminSavedObjectedClient.get('dashboard', 'acl-controlled-dashboard-2'))
+          .error
       ).toBeUndefined();
     });
   });
@@ -268,34 +236,17 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       ).toEqual(1);
     });
 
-    it('should return consistent dashboard when groups match dashboard admin', async () => {
+    it('should return consistent dashboard when groups/users is dashboard admin', async () => {
       expect(
         (
-          await groupIsDashboardAdminSavedObjectedClient.bulkGet([
+          await dashboardAdminSavedObjectedClient.bulkGet([
             { type: 'dashboard', id: 'inner-workspace-dashboard-1' },
           ])
         ).saved_objects.length
       ).toEqual(1);
       expect(
         (
-          await groupIsDashboardAdminSavedObjectedClient.bulkGet([
-            { type: 'dashboard', id: 'acl-controlled-dashboard-2' },
-          ])
-        ).saved_objects.length
-      ).toEqual(1);
-    });
-
-    it('should return consistent dashboard when user ids match dashboard admin', async () => {
-      expect(
-        (
-          await UserIdIsdashboardAdminSavedObjectedClient.bulkGet([
-            { type: 'dashboard', id: 'inner-workspace-dashboard-1' },
-          ])
-        ).saved_objects.length
-      ).toEqual(1);
-      expect(
-        (
-          await UserIdIsdashboardAdminSavedObjectedClient.bulkGet([
+          await dashboardAdminSavedObjectedClient.bulkGet([
             { type: 'dashboard', id: 'acl-controlled-dashboard-2' },
           ])
         ).saved_objects.length
@@ -333,21 +284,8 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       );
     });
 
-    it('should return consistent inner workspace data when groups match dashboard admin', async () => {
-      const result = await groupIsDashboardAdminSavedObjectedClient.find({
-        type: 'dashboard',
-        workspaces: ['workspace-1'],
-        perPage: 999,
-        page: 1,
-      });
-
-      expect(result.saved_objects.some((item) => item.id === 'inner-workspace-dashboard-1')).toBe(
-        true
-      );
-    });
-
-    it('should return consistent inner workspace data when user ids match dashboard admin', async () => {
-      const result = await UserIdIsdashboardAdminSavedObjectedClient.find({
+    it('should return consistent inner workspace data when groups/users is dashboard admin', async () => {
+      const result = await dashboardAdminSavedObjectedClient.find({
         type: 'dashboard',
         workspaces: ['workspace-1'],
         perPage: 999,
@@ -390,8 +328,8 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       await permittedSavedObjectedClient.delete('dashboard', createResult.id);
     });
 
-    it('should able to create saved objects into any workspaces after create called when groups match dashboard admin', async () => {
-      const createResult = await groupIsDashboardAdminSavedObjectedClient.create(
+    it('should able to create saved objects into any workspaces after create called when groups/users is dashboard admin', async () => {
+      const createResult = await dashboardAdminSavedObjectedClient.create(
         'dashboard',
         {},
         {
@@ -399,19 +337,7 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
         }
       );
       expect(createResult.error).toBeUndefined();
-      await groupIsDashboardAdminSavedObjectedClient.delete('dashboard', createResult.id);
-    });
-
-    it('should able to create saved objects into any workspaces after create called when user ids match dashboard admin', async () => {
-      const createResult = await UserIdIsdashboardAdminSavedObjectedClient.create(
-        'dashboard',
-        {},
-        {
-          workspaces: ['workspace-1'],
-        }
-      );
-      expect(createResult.error).toBeUndefined();
-      await groupIsDashboardAdminSavedObjectedClient.delete('dashboard', createResult.id);
+      await dashboardAdminSavedObjectedClient.delete('dashboard', createResult.id);
     });
 
     it('should throw forbidden error when create with override', async () => {
@@ -446,22 +372,8 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       expect(createResult.error).toBeUndefined();
     });
 
-    it('should able to create with override when groups match dashboard admin', async () => {
-      const createResult = await groupIsDashboardAdminSavedObjectedClient.create(
-        'dashboard',
-        {},
-        {
-          id: 'inner-workspace-dashboard-1',
-          overwrite: true,
-          workspaces: ['workspace-1'],
-        }
-      );
-
-      expect(createResult.error).toBeUndefined();
-    });
-
-    it('should able to create with override when uesr ids match dashboard admin', async () => {
-      const createResult = await UserIdIsdashboardAdminSavedObjectedClient.create(
+    it('should able to create with override when groups/users is dashboard admin', async () => {
+      const createResult = await dashboardAdminSavedObjectedClient.create(
         'dashboard',
         {},
         {
@@ -501,28 +413,16 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       await permittedSavedObjectedClient.delete('dashboard', objectId);
     });
 
-    it('should able to create saved objects into any workspaces after bulkCreate called when groups match dashboard damin', async () => {
+    it('should able to create saved objects into any workspaces after bulkCreate called when groups/users is dashboard damin', async () => {
       const objectId = new Date().getTime().toString(16).toUpperCase();
-      const result = await groupIsDashboardAdminSavedObjectedClient.bulkCreate(
+      const result = await dashboardAdminSavedObjectedClient.bulkCreate(
         [{ type: 'dashboard', attributes: {}, id: objectId }],
         {
           workspaces: ['workspace-1'],
         }
       );
       expect(result.saved_objects.length).toEqual(1);
-      await groupIsDashboardAdminSavedObjectedClient.delete('dashboard', objectId);
-    });
-
-    it('should able to create saved objects into any workspaces after bulkCreate called when user ids match dashboard damin', async () => {
-      const objectId = new Date().getTime().toString(16).toUpperCase();
-      const result = await UserIdIsdashboardAdminSavedObjectedClient.bulkCreate(
-        [{ type: 'dashboard', attributes: {}, id: objectId }],
-        {
-          workspaces: ['workspace-1'],
-        }
-      );
-      expect(result.saved_objects.length).toEqual(1);
-      await UserIdIsdashboardAdminSavedObjectedClient.delete('dashboard', objectId);
+      await dashboardAdminSavedObjectedClient.delete('dashboard', objectId);
     });
 
     it('should throw forbidden error when create with override', async () => {
@@ -566,26 +466,8 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       expect(createResult.saved_objects).toHaveLength(1);
     });
 
-    it('should able to bulk create with override when groups match dashboard admin', async () => {
-      const createResult = await groupIsDashboardAdminSavedObjectedClient.bulkCreate(
-        [
-          {
-            id: 'inner-workspace-dashboard-1',
-            type: 'dashboard',
-            attributes: {},
-          },
-        ],
-        {
-          overwrite: true,
-          workspaces: ['workspace-1'],
-        }
-      );
-
-      expect(createResult.saved_objects).toHaveLength(1);
-    });
-
-    it('should able to bulk create with override when user ids match dashboard admin', async () => {
-      const createResult = await UserIdIsdashboardAdminSavedObjectedClient.bulkCreate(
+    it('should able to bulk create with override when groups/users is dashboard admin', async () => {
+      const createResult = await dashboardAdminSavedObjectedClient.bulkCreate(
         [
           {
             id: 'inner-workspace-dashboard-1',
@@ -639,10 +521,10 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       ).toBeUndefined();
     });
 
-    it('should update saved objects for any workspaces when groups match dashboard admin', async () => {
+    it('should update saved objects for any workspaces when groups/users is dashboard admin', async () => {
       expect(
         (
-          await groupIsDashboardAdminSavedObjectedClient.update(
+          await dashboardAdminSavedObjectedClient.update(
             'dashboard',
             'inner-workspace-dashboard-1',
             {}
@@ -651,28 +533,7 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       ).toBeUndefined();
       expect(
         (
-          await groupIsDashboardAdminSavedObjectedClient.update(
-            'dashboard',
-            'acl-controlled-dashboard-2',
-            {}
-          )
-        ).error
-      ).toBeUndefined();
-    });
-
-    it('should update saved objects for any workspaces when user ids match dashboard admin', async () => {
-      expect(
-        (
-          await UserIdIsdashboardAdminSavedObjectedClient.update(
-            'dashboard',
-            'inner-workspace-dashboard-1',
-            {}
-          )
-        ).error
-      ).toBeUndefined();
-      expect(
-        (
-          await UserIdIsdashboardAdminSavedObjectedClient.update(
+          await dashboardAdminSavedObjectedClient.update(
             'dashboard',
             'acl-controlled-dashboard-2',
             {}
@@ -726,34 +587,17 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       ).toEqual(1);
     });
 
-    it('should bulk update saved objects for any workspaces when groups match dashboard admin', async () => {
+    it('should bulk update saved objects for any workspaces when groups/users is dashboard admin', async () => {
       expect(
         (
-          await groupIsDashboardAdminSavedObjectedClient.bulkUpdate([
+          await dashboardAdminSavedObjectedClient.bulkUpdate([
             { type: 'dashboard', id: 'inner-workspace-dashboard-1', attributes: {} },
           ])
         ).saved_objects.length
       ).toEqual(1);
       expect(
         (
-          await groupIsDashboardAdminSavedObjectedClient.bulkUpdate([
-            { type: 'dashboard', id: 'inner-workspace-dashboard-1', attributes: {} },
-          ])
-        ).saved_objects.length
-      ).toEqual(1);
-    });
-
-    it('should bulk update saved objects for any workspaces when user ids match dashboard admin', async () => {
-      expect(
-        (
-          await UserIdIsdashboardAdminSavedObjectedClient.bulkUpdate([
-            { type: 'dashboard', id: 'inner-workspace-dashboard-1', attributes: {} },
-          ])
-        ).saved_objects.length
-      ).toEqual(1);
-      expect(
-        (
-          await UserIdIsdashboardAdminSavedObjectedClient.bulkUpdate([
+          await dashboardAdminSavedObjectedClient.bulkUpdate([
             { type: 'dashboard', id: 'inner-workspace-dashboard-1', attributes: {} },
           ])
         ).saved_objects.length
@@ -827,7 +671,7 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
       expect(SavedObjectsErrorHelpers.isNotFoundError(error)).toBe(true);
     });
 
-    it('should be able to delete any data when groups match dashboard admin', async () => {
+    it('should be able to delete any data when groups/users is dashboard admin', async () => {
       const createPermittedResult = await repositoryKit.create(
         internalSavedObjectsRepository,
         'dashboard',
@@ -840,11 +684,11 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
         }
       );
 
-      await groupIsDashboardAdminSavedObjectedClient.delete('dashboard', createPermittedResult.id);
+      await dashboardAdminSavedObjectedClient.delete('dashboard', createPermittedResult.id);
 
       let permittedError;
       try {
-        permittedError = await groupIsDashboardAdminSavedObjectedClient.get(
+        permittedError = await dashboardAdminSavedObjectedClient.get(
           'dashboard',
           createPermittedResult.id
         );
@@ -862,63 +706,11 @@ describe('WorkspaceSavedObjectsClientWrapper', () => {
         }
       );
 
-      await groupIsDashboardAdminSavedObjectedClient.delete('dashboard', createACLResult.id);
+      await dashboardAdminSavedObjectedClient.delete('dashboard', createACLResult.id);
 
       let ACLError;
       try {
-        ACLError = await groupIsDashboardAdminSavedObjectedClient.get(
-          'dashboard',
-          createACLResult.id
-        );
-      } catch (e) {
-        ACLError = e;
-      }
-      expect(SavedObjectsErrorHelpers.isNotFoundError(ACLError)).toBe(true);
-    });
-
-    it('should be able to delete any data when user ids match dashboard admin', async () => {
-      const createPermittedResult = await repositoryKit.create(
-        internalSavedObjectsRepository,
-        'dashboard',
-        {},
-        {
-          permissions: {
-            read: { users: ['foo'] },
-            write: { users: ['foo'] },
-          },
-        }
-      );
-
-      await UserIdIsdashboardAdminSavedObjectedClient.delete('dashboard', createPermittedResult.id);
-
-      let permittedError;
-      try {
-        permittedError = await UserIdIsdashboardAdminSavedObjectedClient.get(
-          'dashboard',
-          createPermittedResult.id
-        );
-      } catch (e) {
-        permittedError = e;
-      }
-      expect(SavedObjectsErrorHelpers.isNotFoundError(permittedError)).toBe(true);
-
-      const createACLResult = await repositoryKit.create(
-        internalSavedObjectsRepository,
-        'dashboard',
-        {},
-        {
-          workspaces: ['workspace-1'],
-        }
-      );
-
-      await UserIdIsdashboardAdminSavedObjectedClient.delete('dashboard', createACLResult.id);
-
-      let ACLError;
-      try {
-        ACLError = await UserIdIsdashboardAdminSavedObjectedClient.get(
-          'dashboard',
-          createACLResult.id
-        );
+        ACLError = await dashboardAdminSavedObjectedClient.get('dashboard', createACLResult.id);
       } catch (e) {
         ACLError = e;
       }
