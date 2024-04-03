@@ -80,7 +80,7 @@ export interface TableProps {
   items: SavedObjectWithMetadata[];
   itemId: string | (() => string);
   totalItemCount: number;
-  onQueryChange: (query: any, filterFields?: string[]) => void;
+  onQueryChange: (query: any, filterFields: string[]) => void;
   onTableChange: (table: any) => void;
   isSearching: boolean;
   onShowRelationships: (object: SavedObjectWithMetadata) => void;

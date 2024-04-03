@@ -95,8 +95,7 @@ import {
   SavedObjectsManagementNamespaceServiceStart,
 } from '../../services';
 import { Header, Table, Flyout, Relationships, SavedObjectsDuplicateModal } from './components';
-import { DataPublicPluginStart } from '../../../../data/public';
-
+import { DataPublicPluginStart } from '../../../../../plugins/data/public';
 import { DuplicateMode } from './';
 
 interface ExportAllOption {
@@ -657,7 +656,9 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
       return null;
     }
     const { applications } = this.props;
-    const newIndexPatternUrl = applications.getUrlForApp('indexPatterns');
+    const newIndexPatternUrl = applications.getUrlForApp('management', {
+      path: 'opensearch-dashboards/indexPatterns',
+    });
 
     return (
       <Flyout

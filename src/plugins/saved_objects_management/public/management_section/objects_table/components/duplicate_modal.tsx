@@ -210,7 +210,7 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
     if (duplicateMode === DuplicateMode.All) {
       selectedObjects = selectedObjects.filter((item) => this.isSavedObjectTypeIncluded(item.type));
     }
-    // If the target workspace is selected, all saved objects will be retained.
+    // If the target workspace is not selected, all saved objects will be retained.
     // If the target workspace has been selected, filter out the saved objects that belongs to the workspace.
     const includedSelectedObjects = selectedObjects.filter((item) =>
       !!targetWorkspaceId && !!item.workspaces ? !item.workspaces.includes(targetWorkspaceId) : true
@@ -285,7 +285,10 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
           >
             <>
               <EuiText size="s" color="subdued">
-                {'Specify a workspace where the objects will be duplicated.'}
+                {i18n.translate(
+                  'savedObjectsManagement.objectsTable.duplicateModal.targetWorkspaceNotice',
+                  { defaultMessage: 'Specify a workspace where the objects will be duplicated.' }
+                )}
               </EuiText>
               <EuiSpacer size="s" />
               <EuiComboBox
@@ -312,9 +315,13 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
           >
             <>
               <EuiText size="s" color="subdued">
-                {
-                  'We recommended duplicating related objects to ensure your duplicated objects will continue to function.'
-                }
+                {i18n.translate(
+                  'savedObjectsManagement.objectsTable.duplicateModal.relatedObjectsNotice',
+                  {
+                    defaultMessage:
+                      'We recommended duplicating related objects to ensure your duplicated objects will continue to function.',
+                  }
+                )}
               </EuiText>
               <EuiSpacer size="s" />
               <EuiCheckbox

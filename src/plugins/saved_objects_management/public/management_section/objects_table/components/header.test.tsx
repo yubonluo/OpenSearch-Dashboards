@@ -31,7 +31,6 @@
 import React from 'react';
 import { shallow } from 'enzyme';
 import { Header } from './header';
-import { any } from 'bluebird';
 
 describe('Header', () => {
   it('should render normally', () => {

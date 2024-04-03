@@ -234,11 +234,6 @@ describe('SavedObjectsTable', () => {
     }));
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-  });
-
   it('should render normally', async () => {
     const component = shallowRender({ perPageConfig: 15 });
 
