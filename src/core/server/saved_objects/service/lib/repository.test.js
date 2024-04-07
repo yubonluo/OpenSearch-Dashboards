@@ -53,12 +53,6 @@ const createGenericNotFoundError = (...args) =>
 const createUnsupportedTypeError = (...args) =>
   SavedObjectsErrorHelpers.createUnsupportedTypeError(...args).output.payload;
 
-const omitWorkspace = (object) => {
-  const newObject = JSON.parse(JSON.stringify(object));
-  delete newObject.workspaces;
-  return newObject;
-};
-
 describe('SavedObjectsRepository', () => {
   let client;
   let savedObjectsRepository;
@@ -173,7 +167,7 @@ describe('SavedObjectsRepository', () => {
   });
 
   const getMockGetResponse = (
-    { type, id, references, namespace: objectNamespace, originId, workspaces, permissions },
+    { type, id, references, namespace: objectNamespace, originId, permissions, workspaces },
     namespace
   ) => {
     const namespaceId = objectNamespace === 'default' ? undefined : objectNamespace ?? namespace;
@@ -187,9 +181,9 @@ describe('SavedObjectsRepository', () => {
       _source: {
         ...(registry.isSingleNamespace(type) && { namespace: namespaceId }),
         ...(registry.isMultiNamespace(type) && { namespaces: [namespaceId ?? 'default'] }),
-        workspaces,
         ...(originId && { originId }),
         ...(permissions && { permissions }),
+        ...(workspaces && { workspaces }),
         type,
         [type]: { title: 'Testing' },
         references,
@@ -499,9 +493,7 @@ describe('SavedObjectsRepository', () => {
         opensearchClientMock.createSuccessTransportRequestPromise(response)
       );
       const result = await savedObjectsRepository.bulkCreate(objects, options);
-      expect(client.mget).toHaveBeenCalledTimes(
-        multiNamespaceObjects?.length || options?.workspaces ? 1 : 0
-      );
+      expect(client.mget).toHaveBeenCalledTimes(multiNamespaceObjects?.length ? 1 : 0);
       return result;
     };
 
@@ -1801,7 +1793,6 @@ describe('SavedObjectsRepository', () => {
     const obj6 = { type: NAMESPACE_AGNOSTIC_TYPE, id: 'six' };
     const obj7 = { type: NAMESPACE_AGNOSTIC_TYPE, id: 'seven' };
     const obj8 = { type: 'dashboard', id: 'eight', workspaces: ['foo'] };
-    const obj9 = { type: 'dashboard', id: 'nine', workspaces: ['bar'] };
     const namespace = 'foo-namespace';
 
     const checkConflicts = async (objects, options) =>
@@ -1920,36 +1911,6 @@ describe('SavedObjectsRepository', () => {
             // obj5 was not found so it does not result in a conflict error
             { ...obj6, error: createConflictError(obj6.type, obj6.id) },
             // obj7 was not found so it does not result in a conflict error
-          ],
-        });
-      });
-
-      it(`expected results with workspaces`, async () => {
-        const objects = [obj8, obj9];
-        const response = {
-          status: 200,
-          docs: [getMockGetResponse(obj8), getMockGetResponse(obj9)],
-        };
-        client.mget.mockResolvedValue(
-          opensearchClientMock.createSuccessTransportRequestPromise(response)
-        );
-
-        const result = await checkConflicts(objects, {
-          workspaces: ['foo'],
-        });
-        expect(client.mget).toHaveBeenCalledTimes(1);
-        expect(result).toEqual({
-          errors: [
-            { ...omitWorkspace(obj8), error: createConflictError(obj8.type, obj8.id) },
-            {
-              ...omitWorkspace(obj9),
-              error: {
-                ...createConflictError(obj9.type, obj9.id),
-                metadata: {
-                  isNotOverwritable: true,
-                },
-              },
-            },
           ],
         });
       });
@@ -3208,7 +3169,7 @@ describe('SavedObjectsRepository', () => {
     const namespace = 'foo-namespace';
     const originId = 'some-origin-id';
 
-    const getSuccess = async (type, id, options, includeOriginId, permissions) => {
+    const getSuccess = async (type, id, options, includeOriginId, permissions, workspaces) => {
       const response = getMockGetResponse(
         {
           type,
@@ -3217,6 +3178,7 @@ describe('SavedObjectsRepository', () => {
           // operation will return it in the result. This flag is just used for test purposes to modify the mock cluster call response.
           ...(includeOriginId && { originId }),
           ...(permissions && { permissions }),
+          ...(workspaces && { workspaces }),
         },
         options?.namespace
       );
@@ -3380,6 +3342,14 @@ describe('SavedObjectsRepository', () => {
         const result = await getSuccess(type, id, { namespace }, undefined, permissions);
         expect(result).toMatchObject({
           permissions: permissions,
+        });
+      });
+
+      it(`includes workspaces property if present`, async () => {
+        const workspaces = ['workspace-1'];
+        const result = await getSuccess(type, id, { namespace }, undefined, undefined, workspaces);
+        expect(result).toMatchObject({
+          workspaces: workspaces,
         });
       });
     });

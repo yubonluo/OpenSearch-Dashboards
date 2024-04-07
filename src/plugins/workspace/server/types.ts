@@ -12,7 +12,7 @@ import {
   WorkspaceAttribute,
   SavedObjectsServiceStart,
 } from '../../../core/server';
-import { WorkspacePermissionMode } from '../common/constants';
+import { WorkspaceAttributeWithPermission } from '../../../core/types';
 
 export interface WorkspaceFindOptions {
   page?: number;
@@ -54,7 +54,7 @@ export interface IWorkspaceClientImpl {
    */
   create(
     requestDetail: IRequestDetail,
-    payload: Omit<WorkspaceAttribute, 'id'>
+    payload: Omit<WorkspaceAttributeWithPermission, 'id'>
   ): Promise<IResponse<{ id: WorkspaceAttribute['id'] }>>;
   /**
    * List workspaces
@@ -69,7 +69,7 @@ export interface IWorkspaceClientImpl {
   ): Promise<
     IResponse<
       {
-        workspaces: WorkspaceAttribute[];
+        workspaces: WorkspaceAttributeWithPermission[];
       } & Pick<SavedObjectsFindResponse, 'page' | 'per_page' | 'total'>
     >
   >;
@@ -77,10 +77,13 @@ export interface IWorkspaceClientImpl {
    * Get the detail of a given workspace id
    * @param requestDetail {@link IRequestDetail}
    * @param id workspace id
-   * @returns a Promise with the detail of {@link WorkspaceAttribute}
+   * @returns a Promise with the detail of {@link WorkspaceAttributeWithPermission}
    * @public
    */
-  get(requestDetail: IRequestDetail, id: string): Promise<IResponse<WorkspaceAttribute>>;
+  get(
+    requestDetail: IRequestDetail,
+    id: string
+  ): Promise<IResponse<WorkspaceAttributeWithPermission>>;
   /**
    * Update the detail of a given workspace
    * @param requestDetail {@link IRequestDetail}
@@ -92,7 +95,7 @@ export interface IWorkspaceClientImpl {
   update(
     requestDetail: IRequestDetail,
     id: string,
-    payload: Omit<WorkspaceAttribute, 'id'>
+    payload: Omit<WorkspaceAttributeWithPermission, 'id'>
   ): Promise<IResponse<boolean>>;
   /**
    * Delete a given workspace
@@ -125,11 +128,10 @@ export interface AuthInfo {
   user_name?: string;
 }
 
-export type WorkspacePermissionItem = {
-  modes: Array<
-    | WorkspacePermissionMode.LibraryRead
-    | WorkspacePermissionMode.LibraryWrite
-    | WorkspacePermissionMode.Read
-    | WorkspacePermissionMode.Write
-  >;
-} & ({ type: 'user'; userId: string } | { type: 'group'; group: string });
+export interface WorkspacePluginSetup {
+  client: IWorkspaceClientImpl;
+}
+
+export interface WorkspacePluginStart {
+  client: IWorkspaceClientImpl;
+}
