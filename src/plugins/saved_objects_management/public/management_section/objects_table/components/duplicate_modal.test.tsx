@@ -8,17 +8,14 @@ import {
   notificationServiceMock,
   workspacesServiceMock,
 } from '../../../../../../core/public/mocks';
-import {
-  DuplicateMode,
-  ShowDuplicateModalProps,
-  SavedObjectsDuplicateModal,
-} from './duplicate_modal';
+import { ShowDuplicateModalProps, SavedObjectsDuplicateModal } from './duplicate_modal';
 import { SavedObjectWithMetadata } from '../../../types';
 import { shallowWithI18nProvider } from 'test_utils/enzyme_helpers';
 import React from 'react';
 import { WorkspaceObject } from 'src/core/types';
 import { render } from '@testing-library/react';
 import { WorkspaceOption } from './utils';
+import { DuplicateMode } from '../../types';
 
 interface Props extends ShowDuplicateModalProps {
   onClose: () => void;

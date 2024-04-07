@@ -29,17 +29,10 @@ import { HttpSetup, NotificationsStart, WorkspacesStart } from 'opensearch-dashb
 import { i18n } from '@osd/i18n';
 import { SavedObjectWithMetadata } from '../../../../common';
 import { getSavedObjectLabel } from '../../../../public';
-import {
-  WorkspaceOption,
-  capitalizeFirstLetter,
-  getTargetWorkspacesOptions,
-  workspaceToOption,
-} from './utils';
+import { WorkspaceOption, getTargetWorkspacesOptions, workspaceToOption } from './utils';
+import { DuplicateMode } from '../../types';
+import RenderDuplicateObjectCategories from './duplicate_object_categories';
 
-export enum DuplicateMode {
-  Selected = 'selected',
-  All = 'all',
-}
 export interface ShowDuplicateModalProps {
   onDuplicate: (
     savedObjects: SavedObjectWithMetadata[],
@@ -148,49 +141,6 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
     }
   };
 
-  // A checkbox showing the type and count of save objects.
-  renderDuplicateObjectCategory = (
-    savedObjectType: string,
-    savedObjectTypeCount: number,
-    savedObjectTypeChecked: boolean
-  ) => {
-    return (
-      <EuiCheckbox
-        id={'includeSavedObjectType.' + savedObjectType}
-        key={savedObjectType}
-        label={
-          <FormattedMessage
-            id={
-              'savedObjectsManagement.objectsTable.duplicateModal.savedObjectType.' +
-              savedObjectType
-            }
-            defaultMessage={
-              capitalizeFirstLetter(savedObjectType) + ` (${savedObjectTypeCount.toString()})`
-            }
-          />
-        }
-        checked={savedObjectTypeChecked}
-        onChange={() => this.changeIncludeSavedObjectType(savedObjectType)}
-      />
-    );
-  };
-
-  renderDuplicateObjectCategories = () => {
-    const { savedObjectTypeInfoMap } = this.state;
-    const checkboxList: JSX.Element[] = [];
-    savedObjectTypeInfoMap.forEach(
-      ([savedObjectTypeCount, savedObjectTypeChecked], savedObjectType) =>
-        checkboxList.push(
-          this.renderDuplicateObjectCategory(
-            savedObjectType,
-            savedObjectTypeCount,
-            savedObjectTypeChecked
-          )
-        )
-    );
-    return checkboxList;
-  };
-
   isSavedObjectTypeIncluded = (savedObjectType: string) => {
     const { savedObjectTypeInfoMap } = this.state;
     const savedObjectTypeInfo = savedObjectTypeInfoMap.get(savedObjectType);
@@ -223,18 +173,13 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
       confirmDuplicateButtonEnabled = true;
     }
 
-    const warningMessageForOnlyOneSavedObject = (
+    const warningMessage = (
       <EuiText>
-        <EuiTextColor color="danger">1</EuiTextColor> saved object will{' '}
-        <EuiTextColor color="danger">not</EuiTextColor> be copied, because it has already existed in
-        the selected workspace or it is worksapce itself.
-      </EuiText>
-    );
-    const warningMessageForMultipleSavedObjects = (
-      <EuiText>
-        <EuiTextColor color="danger">{ignoredSelectedObjectsLength}</EuiTextColor> saved objects
-        will <EuiTextColor color="danger">not</EuiTextColor> be copied, because they have already
-        existed in selected workspace or they are workspaces themselves.
+        <EuiTextColor color="danger">{ignoredSelectedObjectsLength}</EuiTextColor> saved object
+        {ignoredSelectedObjectsLength === 1 ? ' will' : 's will'}{' '}
+        <EuiTextColor color="danger">not</EuiTextColor> be copied, because{' '}
+        {ignoredSelectedObjectsLength === 1 ? 'it has' : 'they have'} already existed in the
+        selected workspace.
       </EuiText>
     );
 
@@ -247,9 +192,7 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
           iconType="help"
           aria-disabled={ignoredSelectedObjectsLength === 0}
         >
-          {ignoredSelectedObjectsLength === 1
-            ? warningMessageForOnlyOneSavedObject
-            : warningMessageForMultipleSavedObjects}
+          {warningMessage}
         </EuiCallOut>
         <EuiSpacer />
       </>
@@ -303,7 +246,11 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
           </EuiFormRow>
 
           <EuiSpacer size="m" />
-          {duplicateMode === DuplicateMode.All && this.renderDuplicateObjectCategories()}
+          {duplicateMode === DuplicateMode.All &&
+            RenderDuplicateObjectCategories(
+              this.state.savedObjectTypeInfoMap,
+              this.changeIncludeSavedObjectType
+            )}
           {duplicateMode === DuplicateMode.All && <EuiSpacer size="m" />}
 
           <EuiFormRow
