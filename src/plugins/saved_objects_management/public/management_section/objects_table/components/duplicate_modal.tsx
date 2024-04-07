@@ -147,6 +147,20 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
     return savedObjectTypeInfo && savedObjectTypeInfo[1];
   };
 
+  getIncludeAndNotDuplicateObjects = (targetWorkspaceId: string | undefined) => {
+    let selectedObjects = this.state.allSelectedObjects;
+    if (this.props.duplicateMode === DuplicateMode.All) {
+      selectedObjects = selectedObjects.filter((item) => this.isSavedObjectTypeIncluded(item.type));
+    }
+    // If the target workspace is not selected, all saved objects will be retained.
+    // If the target workspace has been selected, filter out the saved objects that belongs to the workspace.
+    const includedSelectedObjects = selectedObjects.filter((item) =>
+      !!targetWorkspaceId && !!item.workspaces ? !item.workspaces.includes(targetWorkspaceId) : true
+    );
+    const ignoredSelectedObjectsLength = selectedObjects.length - includedSelectedObjects.length;
+    return { includedSelectedObjects, ignoredSelectedObjectsLength };
+  };
+
   render() {
     const {
       workspaceOptions,
@@ -156,17 +170,11 @@ export class SavedObjectsDuplicateModal extends React.Component<Props, State> {
     } = this.state;
     const { duplicateMode, onClose } = this.props;
     const targetWorkspaceId = targetWorkspaceOption?.at(0)?.key;
-    let selectedObjects = allSelectedObjects;
-    if (duplicateMode === DuplicateMode.All) {
-      selectedObjects = selectedObjects.filter((item) => this.isSavedObjectTypeIncluded(item.type));
-    }
-    // If the target workspace is not selected, all saved objects will be retained.
-    // If the target workspace has been selected, filter out the saved objects that belongs to the workspace.
-    const includedSelectedObjects = selectedObjects.filter((item) =>
-      !!targetWorkspaceId && !!item.workspaces ? !item.workspaces.includes(targetWorkspaceId) : true
-    );
 
-    const ignoredSelectedObjectsLength = selectedObjects.length - includedSelectedObjects.length;
+    const {
+      includedSelectedObjects,
+      ignoredSelectedObjectsLength,
+    } = this.getIncludeAndNotDuplicateObjects(targetWorkspaceId);
 
     let confirmDuplicateButtonEnabled = false;
     if (!!targetWorkspaceId && includedSelectedObjects.length > 0) {
