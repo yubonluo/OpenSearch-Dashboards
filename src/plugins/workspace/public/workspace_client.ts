@@ -12,6 +12,7 @@ import {
   WorkspacesSetup,
 } from '../../../core/public';
 import { SavedObjectPermissions, WorkspaceAttributeWithPermission } from '../../../core/types';
+import { WorkspacePermissionMode } from '../common/constants';
 
 const WORKSPACES_API_BASE_URL = '/api/workspaces';
 
