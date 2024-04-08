@@ -13,6 +13,7 @@ import {
   WorkspaceAttribute,
   SavedObjectsServiceStart,
 } from '../../../core/server';
+import { WorkspaceAttributeWithPermission } from '../../../core/types';
 import { WorkspacePermissionMode } from '../common/constants';
 
 export interface WorkspaceFindOptions {
@@ -54,7 +55,7 @@ export interface IWorkspaceClientImpl {
    */
   create(
     requestDetail: IRequestDetail,
-    payload: Omit<WorkspaceAttribute, 'id'>
+    payload: Omit<WorkspaceAttributeWithPermission, 'id'>
   ): Promise<IResponse<{ id: WorkspaceAttribute['id'] }>>;
   /**
    * List workspaces
@@ -69,7 +70,7 @@ export interface IWorkspaceClientImpl {
   ): Promise<
     IResponse<
       {
-        workspaces: WorkspaceAttribute[];
+        workspaces: WorkspaceAttributeWithPermission[];
       } & Pick<SavedObjectsFindResponse, 'page' | 'per_page' | 'total'>
     >
   >;
@@ -77,10 +78,13 @@ export interface IWorkspaceClientImpl {
    * Get the detail of a given workspace id
    * @param requestDetail {@link IRequestDetail}
    * @param id workspace id
-   * @returns a Promise with the detail of {@link WorkspaceAttribute}
+   * @returns a Promise with the detail of {@link WorkspaceAttributeWithPermission}
    * @public
    */
-  get(requestDetail: IRequestDetail, id: string): Promise<IResponse<WorkspaceAttribute>>;
+  get(
+    requestDetail: IRequestDetail,
+    id: string
+  ): Promise<IResponse<WorkspaceAttributeWithPermission>>;
   /**
    * Update the detail of a given workspace
    * @param requestDetail {@link IRequestDetail}
@@ -92,7 +96,7 @@ export interface IWorkspaceClientImpl {
   update(
     requestDetail: IRequestDetail,
     id: string,
-    payload: Omit<WorkspaceAttribute, 'id'>
+    payload: Omit<WorkspaceAttributeWithPermission, 'id'>
   ): Promise<IResponse<boolean>>;
   /**
    * Delete a given workspace
@@ -136,4 +140,11 @@ export type WorkspacePermissionItem = {
 
 export interface AppPluginSetupDependencies {
   applicationConfig: ApplicationConfigPluginSetup;
+}
+export interface WorkspacePluginSetup {
+  client: IWorkspaceClientImpl;
+}
+
+export interface WorkspacePluginStart {
+  client: IWorkspaceClientImpl;
 }

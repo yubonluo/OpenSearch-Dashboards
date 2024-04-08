@@ -17,7 +17,12 @@ import {
   WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
   WORKSPACE_CONFLICT_CONTROL_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
 } from '../common/constants';
-import { AppPluginSetupDependencies, IWorkspaceClientImpl } from './types';
+import {
+  IWorkspaceClientImpl,
+  WorkspacePluginSetup,
+  WorkspacePluginStart,
+  AppPluginSetupDependencies,
+} from './types';
 import { WorkspaceClient } from './workspace_client';
 import { registerRoutes } from './routes';
 import { WorkspaceSavedObjectsClientWrapper } from './saved_objects';
@@ -31,15 +36,13 @@ import {
   SavedObjectsPermissionControl,
   SavedObjectsPermissionControlContract,
 } from './permission_control/client';
-import { WorkspacePluginConfigType } from '../config';
 import { updateDashboardAdminStateForRequest } from './utils';
 
-export class WorkspacePlugin implements Plugin<{}, {}> {
+export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePluginStart> {
   private readonly logger: Logger;
   private client?: IWorkspaceClientImpl;
   private workspaceConflictControl?: WorkspaceConflictSavedObjectsClientWrapper;
   private permissionControl?: SavedObjectsPermissionControlContract;
-  private readonly config$: Observable<WorkspacePluginConfigType>;
   private readonly globalConfig$: Observable<SharedGlobalConfig>;
   private workspaceSavedObjectsClientWrapper?: WorkspaceSavedObjectsClientWrapper;
 
@@ -132,15 +135,13 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
 
   constructor(initializerContext: PluginInitializerContext) {
     this.logger = initializerContext.logger.get('plugins', 'workspace');
-    this.config$ = initializerContext.config.create<WorkspacePluginConfigType>();
     this.globalConfig$ = initializerContext.config.legacy.globalConfig$;
   }
 
   public async setup(core: CoreSetup, { applicationConfig }: AppPluginSetupDependencies) {
     this.logger.debug('Setting up Workspaces service');
-    const config: WorkspacePluginConfigType = await this.config$.pipe(first()).toPromise();
-    const isPermissionControlEnabled =
-      config.permission.enabled === undefined ? true : config.permission.enabled;
+    const globalConfig = await this.globalConfig$.pipe(first()).toPromise();
+    const isPermissionControlEnabled = globalConfig.savedObjects.permission.enabled === true;
 
     this.client = new WorkspaceClient(core, this.logger);
 
@@ -163,6 +164,7 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
       logger: this.logger,
       client: this.client as IWorkspaceClientImpl,
       permissionControlClient: this.permissionControl,
+      isPermissionControlEnabled,
     });
 
     core.capabilities.registerProvider(() => ({

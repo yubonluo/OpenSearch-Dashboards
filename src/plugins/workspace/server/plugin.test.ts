@@ -13,9 +13,6 @@ describe('Workspace server plugin', () => {
     const setupMock = coreMock.createSetup();
     const initializerContextConfigMock = coreMock.createPluginInitializerContext({
       enabled: true,
-      permission: {
-        enabled: true,
-      },
     });
     const mockApplicationConfig = {
       getConfigurationClient: jest.fn().mockResolvedValue({}),

@@ -4,7 +4,7 @@
  */
 
 import { i18n } from '@osd/i18n';
-import type {
+import {
   SavedObject,
   SavedObjectsClientContract,
   CoreSetup,
@@ -17,14 +17,11 @@ import {
   WORKSPACE_TYPE,
   Logger,
 } from '../../../core/server';
+import { WorkspaceAttributeWithPermission } from '../../../core/types';
 import { IWorkspaceClientImpl, WorkspaceFindOptions, IResponse, IRequestDetail } from './types';
 import { workspace } from './saved_objects';
 import { generateRandomId } from './utils';
-import {
-  WORKSPACE_OVERVIEW_APP_ID,
-  WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
-  WORKSPACE_UPDATE_APP_ID,
-} from '../common/constants';
+import { WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID } from '../common/constants';
 
 const WORKSPACE_ID_SIZE = 6;
 
@@ -65,10 +62,11 @@ export class WorkspaceClient implements IWorkspaceClientImpl {
   }
   private getFlattenedResultWithSavedObject(
     savedObject: SavedObject<WorkspaceAttribute>
-  ): WorkspaceAttribute {
+  ): WorkspaceAttributeWithPermission {
     return {
       ...savedObject.attributes,
       id: savedObject.id,
+      permissions: savedObject.permissions,
     };
   }
   private formatError(error: Error | any): string {
@@ -114,10 +112,10 @@ export class WorkspaceClient implements IWorkspaceClientImpl {
   }
   public async create(
     requestDetail: IRequestDetail,
-    payload: Omit<WorkspaceAttribute, 'id'>
+    payload: Omit<WorkspaceAttributeWithPermission, 'id'>
   ): ReturnType<IWorkspaceClientImpl['create']> {
     try {
-      const attributes = payload;
+      const { permissions, ...attributes } = payload;
       const id = generateRandomId(WORKSPACE_ID_SIZE);
       const client = this.getSavedObjectClientsFromRequestDetail(requestDetail);
       const existingWorkspaceRes = await this.getScopedClientWithoutPermission(requestDetail)?.find(
@@ -135,6 +133,7 @@ export class WorkspaceClient implements IWorkspaceClientImpl {
         attributes,
         {
           id,
+          permissions,
         }
       );
       return {
@@ -214,7 +213,7 @@ export class WorkspaceClient implements IWorkspaceClientImpl {
   public async get(
     requestDetail: IRequestDetail,
     id: string
-  ): Promise<IResponse<WorkspaceAttribute>> {
+  ): ReturnType<IWorkspaceClientImpl['get']> {
     try {
       const result = await this.getSavedObjectClientsFromRequestDetail(requestDetail).get<
         WorkspaceAttribute
@@ -233,9 +232,9 @@ export class WorkspaceClient implements IWorkspaceClientImpl {
   public async update(
     requestDetail: IRequestDetail,
     id: string,
-    payload: Omit<WorkspaceAttribute, 'id'>
+    payload: Omit<WorkspaceAttributeWithPermission, 'id'>
   ): Promise<IResponse<boolean>> {
-    const attributes = payload;
+    const { permissions, ...attributes } = payload;
     try {
       const client = this.getSavedObjectClientsFromRequestDetail(requestDetail);
       const workspaceInDB: SavedObject<WorkspaceAttribute> = await client.get(WORKSPACE_TYPE, id);
@@ -255,9 +254,9 @@ export class WorkspaceClient implements IWorkspaceClientImpl {
           throw new Error(DUPLICATE_WORKSPACE_NAME_ERROR);
         }
       }
-
       await client.create<Omit<WorkspaceAttribute, 'id'>>(WORKSPACE_TYPE, attributes, {
         id,
+        permissions,
         overwrite: true,
         version: workspaceInDB.version,
       });

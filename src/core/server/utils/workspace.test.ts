@@ -10,11 +10,11 @@ describe('updateWorkspaceState', () => {
   it('update with payload', () => {
     const requestMock = httpServerMock.createOpenSearchDashboardsRequest();
     updateWorkspaceState(requestMock, {
-      id: 'foo',
+      requestWorkspaceId: 'foo',
       isDashboardAdmin: true,
     });
     expect(getWorkspaceState(requestMock)).toEqual({
-      id: 'foo',
+      requestWorkspaceId: 'foo',
       isDashboardAdmin: true,
     });
   });
