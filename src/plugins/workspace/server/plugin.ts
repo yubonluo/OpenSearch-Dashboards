@@ -96,10 +96,10 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
 
         const [configGroups, configUsers] = await Promise.all([
           applicationConfigClient
-            .getEntityConfig('workspace.dashboardAdmin.groups')
+            .getEntityConfig('opensearchDashboards.dashboardAdmin.groups')
             .catch(() => undefined),
           applicationConfigClient
-            .getEntityConfig('workspace.dashboardAdmin.users')
+            .getEntityConfig('opensearchDashboards.dashboardAdmin.users')
             .catch(() => undefined),
         ]);
 
