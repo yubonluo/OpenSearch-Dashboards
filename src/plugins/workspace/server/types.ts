@@ -129,15 +129,6 @@ export interface AuthInfo {
   user_name?: string;
 }
 
-export type WorkspacePermissionItem = {
-  modes: Array<
-    | WorkspacePermissionMode.LibraryRead
-    | WorkspacePermissionMode.LibraryWrite
-    | WorkspacePermissionMode.Read
-    | WorkspacePermissionMode.Write
-  >;
-} & ({ type: 'user'; userId: string } | { type: 'group'; group: string });
-
 export interface AppPluginSetupDependencies {
   applicationConfig: ApplicationConfigPluginSetup;
 }
