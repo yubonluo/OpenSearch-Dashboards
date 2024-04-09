@@ -60,6 +60,7 @@ declare module 'hapi' {
   }
 }
 
+
 declare module '@hapi/hapi' {
   interface PluginsStates {
     workspace?: {

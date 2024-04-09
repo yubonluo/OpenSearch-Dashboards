@@ -136,38 +136,35 @@ export const convertPermissionsToPermissionSettings = (permissions: SavedObjectP
     if (!isWorkspacePermissionMode(mode)) {
       return;
     }
-    if (permissions[mode].users) {
-      permissions[mode].users?.forEach((userId) => {
-        const settingTypeKey = `userId-${userId}`;
-        const modes = settingType2Modes[settingTypeKey] ? settingType2Modes[settingTypeKey] : [];
+    permissions[mode].users?.forEach((userId) => {
+      const settingTypeKey = `userId-${userId}`;
+      const modes = settingType2Modes[settingTypeKey] ?? [];
 
-        modes.push(mode);
-        if (modes.length === 1) {
-          userPermissionSettings.push({
-            type: WorkspacePermissionItemType.User,
-            userId,
-            modes,
-          });
-          settingType2Modes[settingTypeKey] = modes;
-        }
-      });
-      permissions[mode].groups?.forEach((group) => {
-        const settingTypeKey = `group-${group}`;
-        const modes = settingType2Modes[settingTypeKey] ? settingType2Modes[settingTypeKey] : [];
+      modes.push(mode);
+      if (modes.length === 1) {
+        userPermissionSettings.push({
+          type: WorkspacePermissionItemType.User,
+          userId,
+          modes,
+        });
+        settingType2Modes[settingTypeKey] = modes;
+      }
+    });
+    permissions[mode].groups?.forEach((group) => {
+      const settingTypeKey = `group-${group}`;
+      const modes = settingType2Modes[settingTypeKey] ?? [];
 
-        modes.push(mode);
-        if (modes.length === 1) {
-          userPermissionSettings.push({
-            type: WorkspacePermissionItemType.Group,
-            group,
-            modes,
-          });
-        }
-      });
-    }
+      modes.push(mode);
+      if (modes.length === 1) {
+        groupPermissionSettings.push({
+          type: WorkspacePermissionItemType.Group,
+          group,
+          modes,
+        });
+        settingType2Modes[settingTypeKey] = modes;
+      }
+    });
   });
 
-  return [...userPermissionSettings, ...groupPermissionSettings].filter(
-    isValidWorkspacePermissionSetting
-  );
+  return [...userPermissionSettings, ...groupPermissionSettings];
 };

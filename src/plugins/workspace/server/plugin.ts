@@ -16,6 +16,7 @@ import {
 import {
   WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
   WORKSPACE_CONFLICT_CONTROL_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
+  WORKSPACE_ID_CONSUMER_WRAPPER_ID,
 } from '../common/constants';
 import {
   IWorkspaceClientImpl,
@@ -37,6 +38,7 @@ import {
   SavedObjectsPermissionControlContract,
 } from './permission_control/client';
 import { updateDashboardAdminStateForRequest } from './utils';
+import { WorkspaceIdConsumerWrapper } from './saved_objects/workspace_id_consumer_wrapper';
 
 export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePluginStart> {
   private readonly logger: Logger;
@@ -57,6 +59,9 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       );
 
       if (workspaceId) {
+        updateWorkspaceState(request, {
+          requestWorkspaceId: workspaceId,
+        });
         const requestUrl = new URL(request.url.toString());
         requestUrl.pathname = cleanWorkspaceId(requestUrl.pathname);
         return toolkit.rewriteUrl(requestUrl.toString());
@@ -154,6 +159,12 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       -1,
       WORKSPACE_CONFLICT_CONTROL_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
       this.workspaceConflictControl.wrapperFactory
+    );
+
+    core.savedObjects.addClientWrapper(
+      -2,
+      WORKSPACE_ID_CONSUMER_WRAPPER_ID,
+      new WorkspaceIdConsumerWrapper().wrapperFactory
     );
 
     this.logger.info('Workspace permission control enabled:' + isPermissionControlEnabled);
