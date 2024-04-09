@@ -80,9 +80,17 @@ export class OpenSearchDashboardsOverviewPlugin
       map((hasOpenSearchDashboardsApp) => {
         return () => {
           if (!hasOpenSearchDashboardsApp) {
-            return { status: AppStatus.inaccessible, navLinkStatus: AppNavLinkStatus.hidden };
+            return {
+              status: AppStatus.inaccessible,
+              navLinkStatus: AppNavLinkStatus.hidden,
+              workspaceless: true,
+            };
           } else {
-            return { status: AppStatus.accessible, navLinkStatus: AppNavLinkStatus.default };
+            return {
+              status: AppStatus.accessible,
+              navLinkStatus: AppNavLinkStatus.default,
+              workspaceless: true,
+            };
           }
         };
       })

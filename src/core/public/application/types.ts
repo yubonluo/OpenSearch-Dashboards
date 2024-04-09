@@ -245,6 +245,11 @@ export interface App<HistoryLocationState = unknown> {
    * ```
    */
   exactRoute?: boolean;
+
+  /**
+   * Prevent the page to be accessible when inside a workspace. Defaults to `false`.
+   */
+  workspaceless?: boolean;
 }
 
 /**

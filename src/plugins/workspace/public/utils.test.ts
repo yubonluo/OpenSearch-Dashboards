@@ -121,6 +121,21 @@ describe('workspace utils: getSelectedFeatureQuantities', () => {
       status: 0,
       navLinkStatus: 1,
     },
+    {
+      appRoute: '/app/opensearch_dashboards_overview',
+      id: 'opensearchDashboardsOverview',
+      title: 'Overview',
+      category: {
+        id: 'opensearchDashboards',
+        label: 'Library',
+        euiIconType: 'inputOutput',
+        order: 1000,
+      },
+      navLinkStatus: 1,
+      order: -2000,
+      status: 0,
+      workspaceless: true,
+    },
   ] as PublicAppInfo[];
   it('should support * rules and exclude management category', () => {
     const { total, selected } = getSelectedFeatureQuantities(['*'], defaultApplications);
