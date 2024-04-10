@@ -13,6 +13,7 @@ import {
   SavedObjectsServiceStart,
 } from '../../../core/server';
 import { WorkspaceAttributeWithPermission } from '../../../core/types';
+import { WorkspacePermissionMode } from '../common/constants';
 
 export interface WorkspaceFindOptions {
   page?: number;
