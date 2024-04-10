@@ -37,7 +37,7 @@ import {
   SavedObjectsPermissionControl,
   SavedObjectsPermissionControlContract,
 } from './permission_control/client';
-import { updateDashboardAdminStateForRequest } from './utils';
+import { stringToArray, updateDashboardAdminStateForRequest } from './utils';
 import { WorkspaceIdConsumerWrapper } from './saved_objects/workspace_id_consumer_wrapper';
 
 export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePluginStart> {
@@ -70,15 +70,14 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
     });
   }
 
-  private async setupPermission(
-    core: CoreSetup,
-    { applicationConfig }: AppPluginSetupDependencies
-  ) {
+  private setupPermission(core: CoreSetup, { applicationConfig }: AppPluginSetupDependencies) {
     this.permissionControl = new SavedObjectsPermissionControl(this.logger);
 
     core.http.registerOnPostAuth(async (request, response, toolkit) => {
       let groups: string[];
       let users: string[];
+      let configGroups: string[];
+      let configUsers: string[];
 
       // There may be calls to saved objects client before user get authenticated, need to add a try catch here as `getPrincipalsFromRequest` will throw error when user is not authenticated.
       try {
@@ -86,20 +85,13 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       } catch (e) {
         return toolkit.next();
       }
-      if (groups.length === 0 && users.length === 0) {
-        updateWorkspaceState(request, {
-          isDashboardAdmin: false,
-        });
-        return toolkit.next();
-      }
 
-      this.logger.info('Dynamic application configuration enabled:' + !!applicationConfig);
       if (!!applicationConfig) {
         const [coreStart] = await core.getStartServices();
         const scopeClient = coreStart.opensearch.client.asScoped(request);
         const applicationConfigClient = applicationConfig.getConfigurationClient(scopeClient);
 
-        const [configGroups, configUsers] = await Promise.all([
+        const [groupsResult, usersResult] = await Promise.all([
           applicationConfigClient
             .getEntityConfig('opensearchDashboards.dashboardAdmin.groups')
             .catch(() => undefined),
@@ -108,21 +100,12 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
             .catch(() => undefined),
         ]);
 
-        updateDashboardAdminStateForRequest(
-          request,
-          groups,
-          users,
-          configGroups ? [configGroups] : [],
-          configUsers ? [configUsers] : []
-        );
-        return toolkit.next();
+        [configGroups, configUsers] = [stringToArray(groupsResult), stringToArray(usersResult)];
+      } else {
+        const globalConfig: SharedGlobalConfig = await this.globalConfig$.pipe(first()).toPromise();
+        configGroups = (globalConfig.opensearchDashboards.dashboardAdmin.groups || []) as string[];
+        configUsers = (globalConfig.opensearchDashboards.dashboardAdmin.users || []) as string[];
       }
-
-      const globalConfig: SharedGlobalConfig = await this.globalConfig$.pipe(first()).toPromise();
-      const configGroups = (globalConfig.opensearchDashboards.dashboardAdmin.groups ||
-        []) as string[];
-      const configUsers = (globalConfig.opensearchDashboards.dashboardAdmin.users ||
-        []) as string[];
       updateDashboardAdminStateForRequest(request, groups, users, configGroups, configUsers);
       return toolkit.next();
     });
@@ -168,7 +151,7 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
     );
 
     this.logger.info('Workspace permission control enabled:' + isPermissionControlEnabled);
-    if (isPermissionControlEnabled) await this.setupPermission(core, { applicationConfig });
+    if (isPermissionControlEnabled) this.setupPermission(core, { applicationConfig });
 
     registerRoutes({
       http: core.http,

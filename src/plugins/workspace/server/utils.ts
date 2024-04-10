@@ -10,6 +10,7 @@ import {
   OpenSearchDashboardsRequest,
   Principals,
   PrincipalType,
+  SharedGlobalConfig,
 } from '../../../core/server';
 import { AuthInfo } from './types';
 import { updateWorkspaceState } from '../../../core/server/utils';
@@ -70,4 +71,17 @@ export const updateDashboardAdminStateForRequest = (
   updateWorkspaceState(request, {
     isDashboardAdmin: groupMatchAny || userMatchAny,
   });
+};
+
+export const stringToArray = (adminConfig: string | undefined) => {
+  if (!adminConfig) {
+    return [];
+  }
+  let adminConfigArray;
+  try {
+    adminConfigArray = JSON.parse(adminConfig);
+  } catch (e) {
+    return [];
+  }
+  return adminConfigArray;
 };

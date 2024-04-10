@@ -8,6 +8,7 @@ import { httpServerMock, httpServiceMock } from '../../../core/server/mocks';
 import {
   generateRandomId,
   getPrincipalsFromRequest,
+  stringToArray,
   updateDashboardAdminStateForRequest,
 } from './utils';
 import { getWorkspaceState } from '../../../core/server/utils';
@@ -107,5 +108,17 @@ describe('workspace utils', () => {
     const configUsers: string[] = ['dashboard_admin'];
     updateDashboardAdminStateForRequest(mockRequest, groups, users, configGroups, configUsers);
     expect(getWorkspaceState(mockRequest)?.isDashboardAdmin).toBe(false);
+  });
+
+  it('should convert string to array', () => {
+    const jsonString = '["test1","test2"]';
+    const strToArray = stringToArray(jsonString);
+    expect(strToArray).toStrictEqual(new Array('test1', 'test2'));
+  });
+
+  it('should convert string to a null array if input is invalid', () => {
+    const jsonString = '["test1", test2]';
+    const strToArray = stringToArray(jsonString);
+    expect(strToArray).toStrictEqual([]);
   });
 });
