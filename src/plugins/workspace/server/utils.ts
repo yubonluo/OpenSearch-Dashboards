@@ -10,7 +10,6 @@ import {
   OpenSearchDashboardsRequest,
   Principals,
   PrincipalType,
-  SharedGlobalConfig,
 } from '../../../core/server';
 import { AuthInfo } from './types';
 import { updateWorkspaceState } from '../../../core/server/utils';
