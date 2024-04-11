@@ -91,11 +91,9 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       }
 
       if (!!applicationConfig) {
-        const [coreStart] = await core.getStartServices();
-        const scopeClient = coreStart.opensearch.client.asScoped(request);
         [configGroups, configUsers] = await getApplicationOSDAdminConfig(
           { applicationConfig },
-          scopeClient
+          request
         );
       } else {
         [configGroups, configUsers] = await getOSDAdminConfig(this.globalConfig$);

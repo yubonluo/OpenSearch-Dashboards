@@ -9,7 +9,6 @@ import { first } from 'rxjs/operators';
 import {
   AuthStatus,
   HttpAuth,
-  IScopedClusterClient,
   OpenSearchDashboardsRequest,
   Principals,
   PrincipalType,
@@ -91,9 +90,9 @@ export const stringToArray = (adminConfig: string | undefined) => {
 
 export const getApplicationOSDAdminConfig = async (
   { applicationConfig }: AppPluginSetupDependencies,
-  scopeClient: IScopedClusterClient
+  request: OpenSearchDashboardsRequest
 ) => {
-  const applicationConfigClient = applicationConfig.getConfigurationClient(scopeClient);
+  const applicationConfigClient = applicationConfig.getConfigurationClient(request);
 
   const [groupsResult, usersResult] = await Promise.all([
     applicationConfigClient

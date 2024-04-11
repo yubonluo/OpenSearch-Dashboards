@@ -4,7 +4,7 @@
  */
 
 import { AuthStatus } from '../../../core/server';
-import { coreMock, httpServerMock, httpServiceMock } from '../../../core/server/mocks';
+import { httpServerMock, httpServiceMock } from '../../../core/server/mocks';
 import {
   generateRandomId,
   getApplicationOSDAdminConfig,
@@ -156,12 +156,8 @@ describe('workspace utils', () => {
     const mockDependencies: AppPluginSetupDependencies = {
       applicationConfig: applicationConfigMock,
     };
-    const coreStart = coreMock.createInternalStart();
-    const scopedClusterClientMock = coreStart.opensearch.client.asScoped();
-    const [groups, users] = await getApplicationOSDAdminConfig(
-      mockDependencies,
-      scopedClusterClientMock
-    );
+    const mockRequest = httpServerMock.createOpenSearchDashboardsRequest();
+    const [groups, users] = await getApplicationOSDAdminConfig(mockDependencies, mockRequest);
     expect(groups).toEqual(['group1', 'group2']);
     expect(users).toEqual(['user1', 'user2']);
   });
@@ -179,12 +175,8 @@ describe('workspace utils', () => {
     const mockDependencies: AppPluginSetupDependencies = {
       applicationConfig: applicationConfigMock,
     };
-    const coreStart = coreMock.createInternalStart();
-    const scopedClusterClientMock = coreStart.opensearch.client.asScoped();
-    const [groups, users] = await getApplicationOSDAdminConfig(
-      mockDependencies,
-      scopedClusterClientMock
-    );
+    const mockRequest = httpServerMock.createOpenSearchDashboardsRequest();
+    const [groups, users] = await getApplicationOSDAdminConfig(mockDependencies, mockRequest);
     expect(groups).toEqual([]);
     expect(users).toEqual([]);
   });
