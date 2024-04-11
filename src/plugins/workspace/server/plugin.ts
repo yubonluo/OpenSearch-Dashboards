@@ -37,7 +37,11 @@ import {
   SavedObjectsPermissionControl,
   SavedObjectsPermissionControlContract,
 } from './permission_control/client';
-import { stringToArray, updateDashboardAdminStateForRequest } from './utils';
+import {
+  getApplicationOSDAdminConfig,
+  getOSDAdminConfig,
+  updateDashboardAdminStateForRequest,
+} from './utils';
 import { WorkspaceIdConsumerWrapper } from './saved_objects/workspace_id_consumer_wrapper';
 
 export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePluginStart> {
@@ -89,22 +93,12 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       if (!!applicationConfig) {
         const [coreStart] = await core.getStartServices();
         const scopeClient = coreStart.opensearch.client.asScoped(request);
-        const applicationConfigClient = applicationConfig.getConfigurationClient(scopeClient);
-
-        const [groupsResult, usersResult] = await Promise.all([
-          applicationConfigClient
-            .getEntityConfig('opensearchDashboards.dashboardAdmin.groups')
-            .catch(() => undefined),
-          applicationConfigClient
-            .getEntityConfig('opensearchDashboards.dashboardAdmin.users')
-            .catch(() => undefined),
-        ]);
-
-        [configGroups, configUsers] = [stringToArray(groupsResult), stringToArray(usersResult)];
+        [configGroups, configUsers] = await getApplicationOSDAdminConfig(
+          { applicationConfig },
+          scopeClient
+        );
       } else {
-        const globalConfig: SharedGlobalConfig = await this.globalConfig$.pipe(first()).toPromise();
-        configGroups = (globalConfig.opensearchDashboards.dashboardAdmin.groups || []) as string[];
-        configUsers = (globalConfig.opensearchDashboards.dashboardAdmin.users || []) as string[];
+        [configGroups, configUsers] = await getOSDAdminConfig(this.globalConfig$);
       }
       updateDashboardAdminStateForRequest(request, groups, users, configGroups, configUsers);
       return toolkit.next();

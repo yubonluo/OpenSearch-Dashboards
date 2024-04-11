@@ -4,14 +4,18 @@
  */
 
 import crypto from 'crypto';
+import { Observable } from 'rxjs';
+import { first } from 'rxjs/operators';
 import {
   AuthStatus,
   HttpAuth,
+  IScopedClusterClient,
   OpenSearchDashboardsRequest,
   Principals,
   PrincipalType,
+  SharedGlobalConfig,
 } from '../../../core/server';
-import { AuthInfo } from './types';
+import { AppPluginSetupDependencies, AuthInfo } from './types';
 import { updateWorkspaceState } from '../../../core/server/utils';
 
 /**
@@ -83,4 +87,31 @@ export const stringToArray = (adminConfig: string | undefined) => {
     return [];
   }
   return adminConfigArray;
+};
+
+export const getApplicationOSDAdminConfig = async (
+  { applicationConfig }: AppPluginSetupDependencies,
+  scopeClient: IScopedClusterClient
+) => {
+  const applicationConfigClient = applicationConfig.getConfigurationClient(scopeClient);
+
+  const [groupsResult, usersResult] = await Promise.all([
+    applicationConfigClient
+      .getEntityConfig('opensearchDashboards.dashboardAdmin.groups')
+      .catch(() => undefined),
+    applicationConfigClient
+      .getEntityConfig('opensearchDashboards.dashboardAdmin.users')
+      .catch(() => undefined),
+  ]);
+
+  return [stringToArray(groupsResult), stringToArray(usersResult)];
+};
+
+export const getOSDAdminConfig = async (globalConfig$: Observable<SharedGlobalConfig>) => {
+  const globalConfig = await globalConfig$.pipe(first()).toPromise();
+  const groupsResult = (globalConfig.opensearchDashboards?.dashboardAdmin?.groups ||
+    []) as string[];
+  const usersResult = (globalConfig.opensearchDashboards?.dashboardAdmin?.users || []) as string[];
+
+  return [groupsResult, usersResult];
 };
