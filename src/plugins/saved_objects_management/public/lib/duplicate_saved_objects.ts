@@ -11,7 +11,7 @@ export async function duplicateSavedObjects(
   includeReferencesDeep: boolean = true,
   targetWorkspace: string
 ) {
-  return await http.post('/api/saved_objects/_copy', {
+  return await http.post('/api/workspaces/_duplicate_saved_objects', {
     body: JSON.stringify({
       objects,
       includeReferencesDeep,

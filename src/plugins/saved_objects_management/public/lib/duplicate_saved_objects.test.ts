@@ -20,7 +20,7 @@ describe('copy saved objects', () => {
       [MockFunction] {
         "calls": Array [
           Array [
-            "/api/saved_objects/_copy",
+            "/api/workspaces/_duplicate_saved_objects",
             Object {
               "body": "{\\"objects\\":[{\\"type\\":\\"dashboard\\",\\"id\\":\\"1\\"},{\\"type\\":\\"visualization\\",\\"id\\":\\"2\\"}],\\"includeReferencesDeep\\":true,\\"targetWorkspace\\":\\"1\\"}",
             },
@@ -40,13 +40,13 @@ describe('copy saved objects', () => {
       [MockFunction] {
         "calls": Array [
           Array [
-            "/api/saved_objects/_copy",
+            "/api/workspaces/_duplicate_saved_objects",
             Object {
               "body": "{\\"objects\\":[{\\"type\\":\\"dashboard\\",\\"id\\":\\"1\\"},{\\"type\\":\\"visualization\\",\\"id\\":\\"2\\"}],\\"includeReferencesDeep\\":true,\\"targetWorkspace\\":\\"1\\"}",
             },
           ],
           Array [
-            "/api/saved_objects/_copy",
+            "/api/workspaces/_duplicate_saved_objects",
             Object {
               "body": "{\\"objects\\":[{\\"type\\":\\"dashboard\\",\\"id\\":\\"1\\"},{\\"type\\":\\"visualization\\",\\"id\\":\\"2\\"}],\\"includeReferencesDeep\\":true,\\"targetWorkspace\\":\\"1\\"}",
             },

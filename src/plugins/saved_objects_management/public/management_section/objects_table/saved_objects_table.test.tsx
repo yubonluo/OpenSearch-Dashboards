@@ -1006,6 +1006,8 @@ describe('SavedObjectsTable', () => {
       const header = component.find('Header') as any;
       expect(header.prop('showDuplicateAll')).toEqual(true);
       header.prop('onDuplicate')();
+
+      await new Promise((resolve) => process.nextTick(resolve));
       component.update();
 
       expect(component.state('isShowingDuplicateModal')).toEqual(true);
