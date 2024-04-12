@@ -16,17 +16,23 @@ import {
 import {
   WORKSPACE_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
   WORKSPACE_CONFLICT_CONTROL_SAVED_OBJECTS_CLIENT_WRAPPER_ID,
+  WORKSPACE_ID_CONSUMER_WRAPPER_ID,
 } from '../common/constants';
-import { cleanWorkspaceId, getWorkspaceIdFromUrl } from '../../../core/server/utils';
 import { IWorkspaceClientImpl, WorkspacePluginSetup, WorkspacePluginStart } from './types';
 import { WorkspaceClient } from './workspace_client';
 import { registerRoutes } from './routes';
 import { WorkspaceSavedObjectsClientWrapper } from './saved_objects';
+import {
+  cleanWorkspaceId,
+  getWorkspaceIdFromUrl,
+  updateWorkspaceState,
+} from '../../../core/server/utils';
 import { WorkspaceConflictSavedObjectsClientWrapper } from './saved_objects/saved_objects_wrapper_for_check_workspace_conflict';
 import {
   SavedObjectsPermissionControl,
   SavedObjectsPermissionControlContract,
 } from './permission_control/client';
+import { WorkspaceIdConsumerWrapper } from './saved_objects/workspace_id_consumer_wrapper';
 
 export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePluginStart> {
   private readonly logger: Logger;
@@ -47,6 +53,9 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       );
 
       if (workspaceId) {
+        updateWorkspaceState(request, {
+          requestWorkspaceId: workspaceId,
+        });
         const requestUrl = new URL(request.url.toString());
         requestUrl.pathname = cleanWorkspaceId(requestUrl.pathname);
         return toolkit.rewriteUrl(requestUrl.toString());
@@ -78,6 +87,13 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       this.workspaceConflictControl.wrapperFactory
     );
 
+    core.savedObjects.addClientWrapper(
+      -2,
+      WORKSPACE_ID_CONSUMER_WRAPPER_ID,
+      new WorkspaceIdConsumerWrapper().wrapperFactory
+    );
+
+    const maxImportExportSize = core.savedObjects.getImportExportObjectLimit();
     this.logger.info('Workspace permission control enabled:' + isPermissionControlEnabled);
     if (isPermissionControlEnabled) {
       this.permissionControl = new SavedObjectsPermissionControl(this.logger);
@@ -97,6 +113,7 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       http: core.http,
       logger: this.logger,
       client: this.client as IWorkspaceClientImpl,
+      maxImportExportSize,
       permissionControlClient: this.permissionControl,
       isPermissionControlEnabled,
     });
