@@ -16,7 +16,6 @@ import {
 import { getWorkspaceState } from '../../../core/server/utils';
 import { AppPluginSetupDependencies } from './types';
 import { Observable, of } from 'rxjs';
-import { error } from 'console';
 
 describe('workspace utils', () => {
   const mockAuth = httpServiceMock.createAuth();
@@ -166,7 +165,7 @@ describe('workspace utils', () => {
     const applicationConfigMock = {
       getConfigurationClient: jest.fn().mockReturnValue({
         getEntityConfig: jest.fn().mockImplementation(async (entity: string) => {
-          throw error;
+          throw new Error('Not found');
         }),
       }),
       registerConfigurationClient: jest.fn().mockResolvedValue({}),
