@@ -141,19 +141,32 @@ describe('workspace utils: getSelectedFeatureQuantities', () => {
       status: 0,
       workspaceAccessibility: WorkspaceAccessibility.NO,
     },
+    {
+      appRoute: '/app/management',
+      id: 'management',
+      title: 'Dashboards Management',
+      category: {
+        id: 'management',
+        label: 'Management',
+        order: 5000,
+        euiIconType: 'managementApp',
+      },
+      status: 0,
+      navLinkStatus: 1,
+    },
   ] as PublicAppInfo[];
-  it('should support * rules and exclude management category', () => {
+  it('should support * rules and include dashboards management', () => {
     const { total, selected } = getSelectedFeatureQuantities(['*'], defaultApplications);
-    expect(total).toBe(1);
-    expect(selected).toBe(1);
+    expect(total).toBe(2);
+    expect(selected).toBe(2);
   });
 
-  it('should get quantity normally and exclude management category', () => {
+  it('should get quantity normally and include dashboards management', () => {
     const { total, selected } = getSelectedFeatureQuantities(
       ['dev_tools', '!@management'],
       defaultApplications
     );
-    expect(total).toBe(1);
+    expect(total).toBe(2);
     expect(selected).toBe(0);
   });
 });

@@ -70,7 +70,9 @@ export const featureMatchesConfig = (featureConfigs: string[]) => ({
 };
 
 // Get all apps excluding management category
-export const getAllExcludingManagementApps = (applications: PublicAppInfo[]): PublicAppInfo[] => {
+export const getAllIncludingDashboardsManagementApps = (
+  applications: PublicAppInfo[]
+): PublicAppInfo[] => {
   return applications.filter(
     ({ navLinkStatus, chromeless, category, workspaceAccessibility, id }) => {
       const filterCondition =
@@ -90,7 +92,7 @@ export const getSelectedFeatureQuantities = (
   featuresConfig: string[],
   applications: PublicAppInfo[]
 ) => {
-  const visibleApplications = getAllExcludingManagementApps(applications);
+  const visibleApplications = getAllIncludingDashboardsManagementApps(applications);
   const featureFilter = featureMatchesConfig(featuresConfig);
   const selectedApplications = visibleApplications.filter((app) => featureFilter(app));
   return {
