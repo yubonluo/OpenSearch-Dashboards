@@ -6,6 +6,7 @@
 import { BehaviorSubject, Subscription } from 'rxjs';
 import { i18n } from '@osd/i18n';
 import { SavedObjectsManagementPluginSetup } from 'src/plugins/saved_objects_management/public';
+import { ManagementSetup } from 'src/plugins/management/public';
 import {
   AppMountParameters,
   AppNavLinkStatus,
@@ -34,12 +35,14 @@ type WorkspaceAppType = (params: AppMountParameters, services: Services) => () =
 
 interface WorkspacePluginSetupDeps {
   savedObjectsManagement?: SavedObjectsManagementPluginSetup;
+  management?: ManagementSetup;
 }
 
 export class WorkspacePlugin implements Plugin<{}, {}> {
   private coreStart?: CoreStart;
   private currentWorkspaceIdSubscription?: Subscription;
   private currentWorkspaceSubscription?: Subscription;
+  private managementCurrentWorkspaceIdSubscription?: Subscription;
   private appUpdater$ = new BehaviorSubject<AppUpdater>(() => undefined);
   private _changeSavedObjectCurrentWorkspace() {
     if (this.coreStart) {
@@ -75,11 +78,36 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
     });
   }
 
-  public async setup(core: CoreSetup, { savedObjectsManagement }: WorkspacePluginSetupDeps) {
+  /**
+   * If workspace is enabled and user has entered workspace, hide advance settings and dataSource menu and disable
+   */
+  private disableManagementApps(core: CoreSetup, management: ManagementSetup) {
+    const currentWorkspaceId$ = core.workspaces.currentWorkspaceId$;
+    this.managementCurrentWorkspaceIdSubscription?.unsubscribe();
+
+    this.managementCurrentWorkspaceIdSubscription = currentWorkspaceId$.subscribe(
+      (currentWorkspaceId) => {
+        if (currentWorkspaceId) {
+          ['settings', 'dataSources'].forEach((appId) =>
+            management.sections.section.opensearchDashboards.getApp(appId)?.disable()
+          );
+        }
+      }
+    );
+  }
+
+  public async setup(
+    core: CoreSetup,
+    { savedObjectsManagement, management }: WorkspacePluginSetupDeps
+  ) {
     const workspaceClient = new WorkspaceClient(core.http, core.workspaces);
     await workspaceClient.init();
     core.application.registerAppUpdater(this.appUpdater$);
 
+    //  Hide advance settings and dataSource menus and disable in setup
+    if (management) {
+      this.disableManagementApps(core, management);
+    }
     /**
      * Retrieve workspace id from url
      */
@@ -226,6 +254,6 @@ export class WorkspacePlugin implements Plugin<{}, {}> {
   public stop() {
     this.currentWorkspaceIdSubscription?.unsubscribe();
     this.currentWorkspaceSubscription?.unsubscribe();
-    this.currentWorkspaceIdSubscription?.unsubscribe();
+    this.managementCurrentWorkspaceIdSubscription?.unsubscribe();
   }
 }
