@@ -699,12 +699,12 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
     findOptions.perPage = MAX_OBJECTS_AMOUNT;
     findOptions.sortField = 'updated_at';
     findOptions.page = 1;
-    while (true) {
+
+    while (duplicateAllSavedObjects.length < this.state.filteredItemCount) {
       try {
         const resp = await findObjects(http, findOptions);
         const savedObjects = resp.savedObjects;
         duplicateAllSavedObjects = duplicateAllSavedObjects.concat(savedObjects);
-        if (resp.savedObjects.length < MAX_OBJECTS_AMOUNT) break;
       } catch (error) {
         notifications.toasts.addDanger({
           title: i18n.translate(
