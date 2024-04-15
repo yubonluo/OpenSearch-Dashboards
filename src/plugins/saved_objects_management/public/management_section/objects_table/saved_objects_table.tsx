@@ -193,6 +193,49 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
     };
   }
 
+  private get findOptions() {
+    const { activeQuery: query, page, perPage } = this.state;
+    const { allowedTypes, namespaceRegistry } = this.props;
+    const { queryText, visibleTypes, visibleNamespaces, visibleWorkspaces } = parseQuery(query);
+    const filteredTypes = filterQuery(allowedTypes, visibleTypes);
+    // "searchFields" is missing from the "findOptions" but gets injected via the API.
+    // The API extracts the fields from each uiExports.savedObjectsManagement "defaultSearchField" attribute
+    const findOptions: SavedObjectsFindOptions = this.formatWorkspaceIdParams({
+      search: queryText ? `${queryText}*` : undefined,
+      perPage,
+      page: page + 1,
+      fields: ['id'],
+      type: filteredTypes,
+      workspaces: this.workspaceIdQuery,
+    });
+
+    const availableNamespaces = namespaceRegistry.getAll()?.map((ns) => ns.id) || [];
+    if (availableNamespaces.length) {
+      const filteredNamespaces = filterQuery(availableNamespaces, visibleNamespaces);
+      findOptions.namespaces = filteredNamespaces;
+    }
+
+    if (visibleWorkspaces?.length) {
+      const workspaceIds: string[] = visibleWorkspaces.map(
+        (wsName) => this.workspaceNameIdLookup?.get(wsName) || ''
+      );
+      findOptions.workspaces = workspaceIds;
+    }
+
+    if (findOptions.workspaces) {
+      if (findOptions.workspaces.indexOf(PUBLIC_WORKSPACE_ID) !== -1) {
+        // search both saved objects with workspace and without workspace
+        findOptions.workspacesSearchOperator = 'OR';
+      }
+    }
+
+    if (findOptions.type.length > 1) {
+      findOptions.sortField = 'type';
+    }
+
+    return findOptions;
+  }
+
   private get workspaceIdQuery() {
     const { availableWorkspaces, currentWorkspaceId, workspaceEnabled } = this.state;
     // workspace is turned off
@@ -337,47 +380,11 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
   };
 
   debouncedFetchObjects = debounce(async () => {
-    const { activeQuery: query, page, perPage } = this.state;
-    const { notifications, http, allowedTypes, namespaceRegistry } = this.props;
-    const { queryText, visibleTypes, visibleNamespaces, visibleWorkspaces } = parseQuery(query);
-    const filteredTypes = filterQuery(allowedTypes, visibleTypes);
-    // "searchFields" is missing from the "findOptions" but gets injected via the API.
-    // The API extracts the fields from each uiExports.savedObjectsManagement "defaultSearchField" attribute
-    const findOptions: SavedObjectsFindOptions = this.formatWorkspaceIdParams({
-      search: queryText ? `${queryText}*` : undefined,
-      perPage,
-      page: page + 1,
-      fields: ['id'],
-      type: filteredTypes,
-      workspaces: this.workspaceIdQuery,
-    });
-
-    const availableNamespaces = namespaceRegistry.getAll()?.map((ns) => ns.id) || [];
-    if (availableNamespaces.length) {
-      const filteredNamespaces = filterQuery(availableNamespaces, visibleNamespaces);
-      findOptions.namespaces = filteredNamespaces;
-    }
-
-    if (visibleWorkspaces?.length) {
-      const workspaceIds: string[] = visibleWorkspaces.map(
-        (wsName) => this.workspaceNameIdLookup?.get(wsName) || ''
-      );
-      findOptions.workspaces = workspaceIds;
-    }
-
-    if (findOptions.workspaces) {
-      if (findOptions.workspaces.indexOf(PUBLIC_WORKSPACE_ID) !== -1) {
-        // search both saved objects with workspace and without workspace
-        findOptions.workspacesSearchOperator = 'OR';
-      }
-    }
-
-    if (findOptions.type.length > 1) {
-      findOptions.sortField = 'type';
-    }
+    const { activeQuery: query } = this.state;
+    const { notifications, http } = this.props;
 
     try {
-      const resp = await findObjects(http, findOptions);
+      const resp = await findObjects(http, this.findOptions);
       if (!this._isMounted) {
         return;
       }
@@ -682,6 +689,40 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
 
   hideDuplicateModal = () => {
     this.setState({ isShowingDuplicateModal: false });
+  };
+
+  onDuplicateAll = async () => {
+    const { notifications, http } = this.props;
+    let duplicateAllSavedObjects: SavedObjectWithMetadata[] = [];
+    const MAX_OBJECTS_AMOUNT: number = 200;
+    const findOptions = this.findOptions;
+    findOptions.perPage = MAX_OBJECTS_AMOUNT;
+    findOptions.sortField = 'updated_at';
+    findOptions.page = 1;
+    while (true) {
+      try {
+        const resp = await findObjects(http, findOptions);
+        const savedObjects = resp.savedObjects;
+        duplicateAllSavedObjects = duplicateAllSavedObjects.concat(savedObjects);
+        if (resp.savedObjects.length < MAX_OBJECTS_AMOUNT) break;
+      } catch (error) {
+        notifications.toasts.addDanger({
+          title: i18n.translate(
+            'savedObjectsManagement.objectsTable.unableFindSavedObjectsNotificationMessage',
+            { defaultMessage: 'Unable find saved objects' }
+          ),
+          text: `${error}`,
+        });
+        break;
+      }
+      findOptions.page++;
+    }
+
+    this.setState({
+      duplicateSelectedSavedObjects: duplicateAllSavedObjects,
+      isShowingDuplicateModal: true,
+      duplicateMode: DuplicateMode.All,
+    });
   };
 
   onDuplicate = async (
@@ -1094,13 +1135,7 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
           onExportAll={() => this.setState({ isShowingExportAllOptionsModal: true })}
           onImport={this.showImportFlyout}
           showDuplicateAll={workspaceEnabled}
-          onDuplicate={() =>
-            this.setState({
-              duplicateSelectedSavedObjects: savedObjects,
-              isShowingDuplicateModal: true,
-              duplicateMode: DuplicateMode.All,
-            })
-          }
+          onDuplicate={this.onDuplicateAll}
           onRefresh={this.refreshObjects}
           filteredCount={filteredItemCount}
           objectCount={savedObjects.length}
