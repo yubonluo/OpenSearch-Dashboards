@@ -139,7 +139,7 @@ describe('workspace utils: getSelectedFeatureQuantities', () => {
       navLinkStatus: 1,
       order: -2000,
       status: 0,
-      workspaceless: true,
+      workspaceAccessibility: WorkspaceAccessibility.NO,
     },
   ] as PublicAppInfo[];
   it('should support * rules and exclude management category', () => {

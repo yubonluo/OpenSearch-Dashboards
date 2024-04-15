@@ -71,15 +71,19 @@ export const featureMatchesConfig = (featureConfigs: string[]) => ({
 
 // Get all apps excluding management category
 export const getAllExcludingManagementApps = (applications: PublicAppInfo[]): PublicAppInfo[] => {
-  return applications.filter(({ navLinkStatus, chromeless, category, workspaceless, id }) => {
-    const filterCondition =
-      navLinkStatus !== AppNavLinkStatus.hidden && !chromeless && !workspaceless;
-    if (category?.id === DEFAULT_APP_CATEGORIES.management.id) {
-      return filterCondition && id === 'management';
-    } else {
-      return filterCondition;
+  return applications.filter(
+    ({ navLinkStatus, chromeless, category, workspaceAccessibility, id }) => {
+      const filterCondition =
+        navLinkStatus !== AppNavLinkStatus.hidden &&
+        !chromeless &&
+        workspaceAccessibility !== WorkspaceAccessibility.NO;
+      if (category?.id === DEFAULT_APP_CATEGORIES.management.id) {
+        return filterCondition && id === 'management';
+      } else {
+        return filterCondition;
+      }
     }
-  });
+  );
 };
 
 export const getSelectedFeatureQuantities = (

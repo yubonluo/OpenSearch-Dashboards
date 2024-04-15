@@ -84,13 +84,13 @@ export class OpenSearchDashboardsOverviewPlugin
             return {
               status: AppStatus.inaccessible,
               navLinkStatus: AppNavLinkStatus.hidden,
-              workspaceless: true,
+              workspaceAccessibility: WorkspaceAccessibility.NO,
             };
           } else {
             return {
               status: AppStatus.accessible,
               navLinkStatus: AppNavLinkStatus.default,
-              workspaceless: true,
+              workspaceAccessibility: WorkspaceAccessibility.NO,
             };
           }
         };
