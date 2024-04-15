@@ -694,9 +694,7 @@ export class SavedObjectsTable extends Component<SavedObjectsTableProps, SavedOb
   onDuplicateAll = async () => {
     const { notifications, http } = this.props;
     let duplicateAllSavedObjects: SavedObjectWithMetadata[] = [];
-    const MAX_OBJECTS_AMOUNT: number = 200;
     const findOptions = this.findOptions;
-    findOptions.perPage = MAX_OBJECTS_AMOUNT;
     findOptions.sortField = 'updated_at';
     findOptions.page = 1;
 
