@@ -69,21 +69,19 @@ export const featureMatchesConfig = (featureConfigs: string[]) => ({
   return matched;
 };
 
-// Get all apps excluding management category
-export const getAllIncludingDashboardsManagementApps = (
-  applications: PublicAppInfo[]
-): PublicAppInfo[] => {
+// Get all apps excluding that should not be displayed in workspace.
+export const getAllFilterApps = (applications: PublicAppInfo[]): PublicAppInfo[] => {
   return applications.filter(
     ({ navLinkStatus, chromeless, category, workspaceAccessibility, id }) => {
       const filterCondition =
         navLinkStatus !== AppNavLinkStatus.hidden &&
         !chromeless &&
         workspaceAccessibility !== WorkspaceAccessibility.NO;
+      // If the category is management, only retain dashboards management.
       if (category?.id === DEFAULT_APP_CATEGORIES.management.id) {
         return filterCondition && id === 'management';
-      } else {
-        return filterCondition;
       }
+      return filterCondition;
     }
   );
 };
@@ -92,7 +90,7 @@ export const getSelectedFeatureQuantities = (
   featuresConfig: string[],
   applications: PublicAppInfo[]
 ) => {
-  const visibleApplications = getAllIncludingDashboardsManagementApps(applications);
+  const visibleApplications = getAllFilterApps(applications);
   const featureFilter = featureMatchesConfig(featuresConfig);
   const selectedApplications = visibleApplications.filter((app) => featureFilter(app));
   return {

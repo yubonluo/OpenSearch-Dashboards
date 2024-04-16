@@ -20,7 +20,7 @@ import { DEFAULT_APP_CATEGORIES, PublicAppInfo } from '../../../../../core/publi
 
 import { WorkspaceFeature, WorkspaceFeatureGroup } from './types';
 import { isDefaultCheckedFeatureId, isWorkspaceFeatureGroup } from './utils';
-import { getAllIncludingDashboardsManagementApps } from '../../utils';
+import { getAllFilterApps } from '../../utils';
 
 const libraryCategoryLabel = i18n.translate('core.ui.libraryNavList.label', {
   defaultMessage: 'Library',
@@ -55,7 +55,7 @@ export const WorkspaceFeatureSelector = ({
       Array<WorkspaceFeature | WorkspaceFeatureGroup>
     >((previousValue, currentKey) => {
       const apps = category2Applications[currentKey];
-      const features = getAllIncludingDashboardsManagementApps(apps).map(({ id, title }) => ({
+      const features = getAllFilterApps(apps).map(({ id, title }) => ({
         id,
         name: title,
       }));
