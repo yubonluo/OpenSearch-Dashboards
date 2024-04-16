@@ -5,6 +5,7 @@
 
 import {
   featureMatchesConfig,
+  getAllFilterApps,
   getSelectedFeatureQuantities,
   isAppAccessibleInWorkspace,
 } from './utils';
@@ -155,6 +156,14 @@ describe('workspace utils: getSelectedFeatureQuantities', () => {
       navLinkStatus: 1,
     },
   ] as PublicAppInfo[];
+
+  it('should filter out apps correctly', () => {
+    const filterApps = getAllFilterApps(defaultApplications);
+    expect(filterApps.length).toBe(2);
+    expect(filterApps[0].id).toBe('dashboards');
+    expect(filterApps[1].id).toBe('management');
+  });
+
   it('should support * rules and include dashboards management', () => {
     const { total, selected } = getSelectedFeatureQuantities(['*'], defaultApplications);
     expect(total).toBe(2);
