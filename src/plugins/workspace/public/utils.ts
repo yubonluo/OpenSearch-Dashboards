@@ -69,7 +69,7 @@ export const featureMatchesConfig = (featureConfigs: string[]) => ({
   return matched;
 };
 
-// Get all apps excluding that should not be displayed in workspace.
+// Get all apps that should be displayed in workspace.
 export const getAllFilterApps = (applications: PublicAppInfo[]): PublicAppInfo[] => {
   return applications.filter(
     ({ navLinkStatus, chromeless, category, workspaceAccessibility, id }) => {
