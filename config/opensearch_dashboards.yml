@@ -4,7 +4,7 @@
 # Specifies the address to which the OpenSearch Dashboards server will bind. IP addresses and host names are both valid values.
 # The default is 'localhost', which usually means remote machines will not be able to connect.
 # To allow connections from remote users, set this parameter to a non-loopback address.
-#server.host: "localhost"
+server.host: "0.0.0.0"
 
 # Enables you to specify a path to mount OpenSearch Dashboards at if you are running behind a proxy.
 # Use the `server.rewriteBasePath` setting to tell OpenSearch Dashboards if it should remove the basePath
@@ -356,3 +356,16 @@
 # Dashboard admin will have the access to all the workspaces(workspace.enabled: true) and objects inside OpenSearch Dashboards.
 # opensearchDashboards.dashboardAdmin.groups: ["dashboard_admin"]
 # opensearchDashboards.dashboardAdmin.users: ["dashboard_admin"]
+opensearchDashboards.dashboardAdmin.users: ["admin"]
+
+workspace.enabled: true 
+opensearch.hosts: ["https://localhost:9200"]
+opensearch.username: "admin"
+opensearch.password: "Lyb123456~" 
+opensearch.ssl.verificationMode: none
+savedObjects.permission.enabled: true
+# data_source.enabled: true
+# data_source.ssl.verificationMode: none
+# data_source.hideLocalCluster: true
+
+# assistant.chat.enabled: true

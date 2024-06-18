@@ -30,6 +30,7 @@ import { WorkspaceSavedObjectsClientWrapper } from './saved_objects';
 import {
   cleanWorkspaceId,
   getWorkspaceIdFromUrl,
+  getWorkspaceState,
   updateWorkspaceState,
 } from '../../../core/server/utils';
 import { WorkspaceConflictSavedObjectsClientWrapper } from './saved_objects/saved_objects_wrapper_for_check_workspace_conflict';
@@ -89,6 +90,14 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       const [configGroups, configUsers] = await getOSDAdminConfigFromYMLConfig(this.globalConfig$);
       updateDashboardAdminStateForRequest(request, groups, users, configGroups, configUsers);
       return toolkit.next();
+    });
+
+    core.capabilities.registerSwitcher(async (request, capabilites) => {
+      return {
+        workspaces: {
+          isDashboardAdmin: getWorkspaceState(request).isDashboardAdmin || false,
+        },
+      };
     });
 
     this.workspaceSavedObjectsClientWrapper = new WorkspaceSavedObjectsClientWrapper(
@@ -156,6 +165,7 @@ export class WorkspacePlugin implements Plugin<WorkspacePluginSetup, WorkspacePl
       workspaces: {
         enabled: true,
         permissionEnabled: isPermissionControlEnabled,
+        isDashboardAdmin: false,
       },
     }));
 
