@@ -49,12 +49,13 @@ export const UseCaseFooter: React.FC<UseCaseFooterProps> = ({
         href={getUrl('workspace_create', {
           absolute: false,
         })}
+        data-test-subj="useCase.footer.disable.createWorkspace.button"
       >
         <FormattedMessage id="useCase.footer.createWorkspace" defaultMessage="Create workspace" />
       </EuiButton>
     ) : (
       <EuiToolTip content={toolTipMessage} position="top">
-        <EuiButton isDisabled={true}>
+        <EuiButton isDisabled={true} data-test-subj="useCase.footer.disable.openWorkspace.button">
           <FormattedMessage id="useCase.footer.disable.openWorkspace" defaultMessage="Open" />
         </EuiButton>
       </EuiToolTip>
@@ -68,7 +69,7 @@ export const UseCaseFooter: React.FC<UseCaseFooterProps> = ({
       basePath
     );
     return (
-      <EuiButton href={URL}>
+      <EuiButton href={URL} data-test-subj="useCase.footer.disable.openWorkspace.button">
         <FormattedMessage id="useCase.footer.openWorkspace" defaultMessage="Open" />
       </EuiButton>
     );
