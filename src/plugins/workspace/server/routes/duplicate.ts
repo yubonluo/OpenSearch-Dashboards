@@ -12,12 +12,14 @@ import {
 } from '../../../../core/server';
 import { WORKSPACES_API_BASE_URL } from '.';
 import { IWorkspaceClientImpl } from '../types';
+import { getDataSourcesList } from '../utils';
 
 export const registerDuplicateRoute = (
   router: IRouter,
   logger: Logger,
   client: IWorkspaceClientImpl,
-  maxImportExportSize: number
+  maxImportExportSize: number,
+  isDataSourceEnabled: boolean
 ) => {
   router.post(
     {
@@ -72,6 +74,8 @@ export const registerDuplicateRoute = (
         });
       }
 
+      const assignedDataSources = await getDataSourcesList(savedObjectsClient, [targetWorkspace]);
+
       // fetch all the details of the specified saved objects
       const objectsListStream = await exportSavedObjectsToStream({
         savedObjectsClient,
@@ -90,7 +94,8 @@ export const registerDuplicateRoute = (
         overwrite: false,
         createNewCopies: true,
         workspaces: [targetWorkspace],
-        dataSourceEnabled: true,
+        dataSourceEnabled: isDataSourceEnabled,
+        assignedDataSources: assignedDataSources.map((ds) => ds.id),
       });
 
       return res.ok({ body: result });

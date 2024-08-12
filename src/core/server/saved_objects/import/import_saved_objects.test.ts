@@ -35,6 +35,7 @@ import {
   SavedObjectsType,
   SavedObject,
   SavedObjectsImportError,
+  SavedObjectsBaseOptions,
 } from '../types';
 import { savedObjectsClientMock } from '../../mocks';
 import { SavedObjectsImportOptions, ISavedObjectTypeRegistry } from '..';
@@ -48,6 +49,7 @@ import { checkConflicts } from './check_conflicts';
 import { checkOriginConflicts } from './check_origin_conflicts';
 import { createSavedObjects } from './create_saved_objects';
 import { checkConflictsForDataSource } from './check_conflict_for_data_source';
+import { findDataSourceForObject } from './utils';
 
 jest.mock('./collect_saved_objects');
 jest.mock('./regenerate_ids');
@@ -56,6 +58,7 @@ jest.mock('./check_conflicts');
 jest.mock('./check_origin_conflicts');
 jest.mock('./create_saved_objects');
 jest.mock('./check_conflict_for_data_source');
+jest.mock('./utils');
 
 const getMockFn = <T extends (...args: any[]) => any, U>(fn: (...args: Parameters<T>) => U) =>
   fn as jest.MockedFunction<(...args: Parameters<T>) => U>;
@@ -101,7 +104,9 @@ describe('#importSavedObjectsFromStream', () => {
   const setupOptions = (
     createNewCopies: boolean = false,
     dataSourceId: string | undefined = undefined,
-    dataSourceEnabled: boolean | undefined = false
+    dataSourceEnabled: boolean | undefined = false,
+    workspaces: SavedObjectsBaseOptions['workspaces'] = undefined,
+    assignedDataSources: string[] = []
   ): SavedObjectsImportOptions => {
     readStream = new Readable();
     savedObjectsClient = savedObjectsClientMock.create();
@@ -122,6 +127,8 @@ describe('#importSavedObjectsFromStream', () => {
       namespace,
       createNewCopies,
       dataSourceId,
+      workspaces,
+      assignedDataSources,
     };
   };
   const createObject = (
@@ -392,6 +399,48 @@ describe('#importSavedObjectsFromStream', () => {
         collectedObjects: [],
         importIdMap: new Map(), // doesn't matter
       });
+
+      const result = await importSavedObjectsFromStream(options);
+      expect(result).toEqual({ success: false, successCount: 0, errors: [expect.any(Object)] });
+    });
+
+    test('validates workspace with assigned data source', async () => {
+      const options = setupOptions(false, undefined, false, ['workspace-1'], ['dataSource-1']);
+      const collectedObjects = [createObject()];
+      getMockFn(collectSavedObjects).mockResolvedValue({
+        errors: [],
+        collectedObjects,
+        importIdMap: new Map(),
+      });
+      getMockFn(findDataSourceForObject).mockResolvedValue('dataSource-1');
+
+      const result = await importSavedObjectsFromStream(options);
+      expect(result).toEqual({ success: true, successCount: 0 });
+    });
+
+    test('validates workspace with unassigned data source', async () => {
+      const options = setupOptions(false, undefined, false, ['workspace-1'], ['dataSource-1']);
+      const collectedObjects = [createObject()];
+      getMockFn(collectSavedObjects).mockResolvedValue({
+        errors: [],
+        collectedObjects,
+        importIdMap: new Map(),
+      });
+      getMockFn(findDataSourceForObject).mockResolvedValue('dataSource-2');
+
+      const result = await importSavedObjectsFromStream(options);
+      expect(result).toEqual({ success: false, successCount: 0, errors: [expect.any(Object)] });
+    });
+
+    test('validates workspace with catch error', async () => {
+      const options = setupOptions(false, undefined, false, ['workspace-1'], ['dataSource-1']);
+      const collectedObjects = [createObject()];
+      getMockFn(collectSavedObjects).mockResolvedValue({
+        errors: [],
+        collectedObjects,
+        importIdMap: new Map(),
+      });
+      getMockFn(findDataSourceForObject).mockRejectedValue(null);
 
       const result = await importSavedObjectsFromStream(options);
       expect(result).toEqual({ success: false, successCount: 0, errors: [expect.any(Object)] });

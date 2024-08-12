@@ -42,6 +42,7 @@ import { checkConflicts } from './check_conflicts';
 import { regenerateIds } from './regenerate_ids';
 import { checkConflictsForDataSource } from './check_conflict_for_data_source';
 import { isSavedObjectWithDataSource } from './validate_object_id';
+import { findDataSourceForObject } from './utils';
 
 /**
  * Import saved objects from given stream. See the {@link SavedObjectsImportOptions | options} for more
@@ -61,6 +62,7 @@ export async function importSavedObjectsFromStream({
   dataSourceTitle,
   workspaces,
   dataSourceEnabled,
+  assignedDataSources,
 }: SavedObjectsImportOptions): Promise<SavedObjectsImportResponse> {
   let errorAccumulator: SavedObjectsImportError[] = [];
   const supportedTypes = typeRegistry.getImportableAndExportableTypes().map((type) => type.name);
@@ -93,6 +95,39 @@ export async function importSavedObjectsFromStream({
         errors: notSupportedErrors,
       };
     }
+  }
+
+  // If target workspace and assigned data source is exists, it will check whether
+  // the assigned data sources in the target workspace include the data sources of the imported saved objects.
+  if (workspaces && workspaces.length > 0 && assignedDataSources) {
+    const errors: SavedObjectsImportError[] = [];
+    const duplicateObjects: typeof collectSavedObjectsResult.collectedObjects = [];
+    for (const object of collectSavedObjectsResult.collectedObjects) {
+      try {
+        const referenceDSId = await findDataSourceForObject(object, savedObjectsClient);
+        if (referenceDSId && !assignedDataSources.some((ds) => ds === referenceDSId)) {
+          const error: SavedObjectsImportError = {
+            type: object.type,
+            id: object.id,
+            error: { type: 'unsupported_type' },
+            meta: { title: object.attributes?.title },
+          };
+          errors.push(error);
+        } else {
+          duplicateObjects.push(object);
+        }
+      } catch (err) {
+        const error: SavedObjectsImportError = {
+          type: object.type,
+          id: object.id,
+          error: { type: 'unsupported_type' },
+          meta: { title: object.attributes?.title },
+        };
+        errors.push(error);
+      }
+    }
+    errorAccumulator = [...errorAccumulator, ...errors];
+    collectSavedObjectsResult.collectedObjects = duplicateObjects;
   }
 
   errorAccumulator = [...errorAccumulator, ...collectSavedObjectsResult.errors];
