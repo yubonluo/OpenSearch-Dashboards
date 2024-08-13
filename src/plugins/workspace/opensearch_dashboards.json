@@ -8,5 +8,5 @@
     "opensearchDashboardsReact"
   ],
   "optionalPlugins": ["savedObjectsManagement","management","dataSourceManagement","contentManagement","dataSource"],
-  "requiredBundles": ["opensearchDashboardsReact", "home"]
+  "requiredBundles": ["opensearchDashboardsReact", "home","dataSource"]
 }
