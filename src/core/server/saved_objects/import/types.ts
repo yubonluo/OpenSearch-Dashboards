@@ -191,7 +191,6 @@ export interface SavedObjectsImportOptions {
   dataSourceTitle?: string;
   dataSourceEnabled?: boolean;
   workspaces?: SavedObjectsBaseOptions['workspaces'];
-  assignedDataSources?: string[];
 }
 
 /**

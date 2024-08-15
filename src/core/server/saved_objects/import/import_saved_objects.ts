@@ -62,7 +62,6 @@ export async function importSavedObjectsFromStream({
   dataSourceTitle,
   workspaces,
   dataSourceEnabled,
-  assignedDataSources,
 }: SavedObjectsImportOptions): Promise<SavedObjectsImportResponse> {
   let errorAccumulator: SavedObjectsImportError[] = [];
   const supportedTypes = typeRegistry.getImportableAndExportableTypes().map((type) => type.name);
@@ -99,13 +98,48 @@ export async function importSavedObjectsFromStream({
 
   // If target workspace and assigned data source is exists, it will check whether
   // the assigned data sources in the target workspace include the data sources of the imported saved objects.
-  if (workspaces && workspaces.length > 0 && assignedDataSources) {
-    const errors: SavedObjectsImportError[] = [];
-    const duplicateObjects: typeof collectSavedObjectsResult.collectedObjects = [];
-    for (const object of collectSavedObjectsResult.collectedObjects) {
-      try {
-        const referenceDSId = await findDataSourceForObject(object, savedObjectsClient);
-        if (referenceDSId && !assignedDataSources.some((ds) => ds === referenceDSId)) {
+  if (workspaces && workspaces.length > 0) {
+    const assignedDataSources = await savedObjectsClient
+      .find({
+        type: 'data-source',
+        fields: ['id', 'title'],
+        perPage: 10000,
+        workspaces,
+      })
+      .then((response) => {
+        const objects = response?.saved_objects;
+        if (objects) {
+          return objects.map((source) => {
+            const id = source.id;
+            return {
+              id,
+            };
+          });
+        } else {
+          return [];
+        }
+      });
+    if (assignedDataSources) {
+      const errors: SavedObjectsImportError[] = [];
+      const duplicateObjects: typeof collectSavedObjectsResult.collectedObjects = [];
+      for (const object of collectSavedObjectsResult.collectedObjects) {
+        try {
+          const referenceDSId = await findDataSourceForObject(object, savedObjectsClient);
+          if (referenceDSId && !assignedDataSources.some((ds) => ds.id === referenceDSId)) {
+            const error: SavedObjectsImportError = {
+              type: object.type,
+              id: object.id,
+              error: {
+                type: 'missing_references',
+                references: [{ type: 'data-source', id: referenceDSId }],
+              },
+              meta: { title: object.attributes?.title },
+            };
+            errors.push(error);
+          } else {
+            duplicateObjects.push(object);
+          }
+        } catch (err) {
           const error: SavedObjectsImportError = {
             type: object.type,
             id: object.id,
@@ -113,21 +147,11 @@ export async function importSavedObjectsFromStream({
             meta: { title: object.attributes?.title },
           };
           errors.push(error);
-        } else {
-          duplicateObjects.push(object);
         }
-      } catch (err) {
-        const error: SavedObjectsImportError = {
-          type: object.type,
-          id: object.id,
-          error: { type: 'unsupported_type' },
-          meta: { title: object.attributes?.title },
-        };
-        errors.push(error);
       }
+      errorAccumulator = [...errorAccumulator, ...errors];
+      collectSavedObjectsResult.collectedObjects = duplicateObjects;
     }
-    errorAccumulator = [...errorAccumulator, ...errors];
-    collectSavedObjectsResult.collectedObjects = duplicateObjects;
   }
 
   errorAccumulator = [...errorAccumulator, ...collectSavedObjectsResult.errors];

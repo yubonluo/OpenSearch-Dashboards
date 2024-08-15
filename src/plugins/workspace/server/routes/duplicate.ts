@@ -74,8 +74,6 @@ export const registerDuplicateRoute = (
         });
       }
 
-      const assignedDataSources = await getDataSourcesList(savedObjectsClient, [targetWorkspace]);
-
       // fetch all the details of the specified saved objects
       const objectsListStream = await exportSavedObjectsToStream({
         savedObjectsClient,
@@ -95,7 +93,6 @@ export const registerDuplicateRoute = (
         createNewCopies: true,
         workspaces: [targetWorkspace],
         dataSourceEnabled: isDataSourceEnabled,
-        assignedDataSources: assignedDataSources.map((ds) => ds.id),
       });
 
       return res.ok({ body: result });
