@@ -5,9 +5,9 @@
 
 import { coreMock } from '../../../../core/public/mocks';
 import { Content, Section } from '../services';
-import { createCardInput, createDashboardInput } from './section_input';
+import { DASHBOARD_PANEL_WIDTH, createCardInput, createDashboardInput } from './section_input';
 
-test('it should create input for card section', () => {
+test('it should create card section input', () => {
   const section: Section = { id: 'section1', kind: 'card', order: 10 };
   const content: Content = {
     id: 'content1',
@@ -22,6 +22,41 @@ test('it should create input for card section', () => {
     title: '',
     hidePanelTitles: true,
     viewMode: 'view',
+    panels: {
+      content1: {
+        type: 'card_embeddable',
+        explicitInput: {
+          description: 'content description',
+          id: 'content1',
+          onClick: undefined,
+          title: 'content title',
+        },
+      },
+    },
+  });
+});
+
+test('it should create card section input with explicit input specified', () => {
+  const section: Section = {
+    id: 'section1',
+    kind: 'card',
+    order: 10,
+    input: { title: 'new title', columns: 4 },
+  };
+  const content: Content = {
+    id: 'content1',
+    kind: 'card',
+    order: 0,
+    title: 'content title',
+    description: 'content description',
+  };
+  const input = createCardInput(section, [content]);
+  expect(input).toEqual({
+    id: 'section1',
+    title: 'new title',
+    hidePanelTitles: true,
+    viewMode: 'view',
+    columns: 4,
     panels: {
       content1: {
         type: 'card_embeddable',
@@ -79,7 +114,12 @@ test('it should throw error if creating dashboard input with non-dashboard secti
 });
 
 test('it should create dashboard input', async () => {
-  const section: Section = { id: 'section1', kind: 'dashboard', order: 10 };
+  const section: Section = {
+    id: 'section1',
+    kind: 'dashboard',
+    order: 10,
+    input: { timeRange: { from: 'now-1d', to: 'now' } },
+  };
   const staticViz: Content = {
     id: 'content1',
     kind: 'visualization',
@@ -111,6 +151,9 @@ test('it should create dashboard input', async () => {
   const input = await createDashboardInput(section, [staticViz, dynamicViz, customRender], {
     savedObjectsClient: clientMock,
   });
+
+  // with explicit section input
+  expect(input.timeRange).toEqual({ from: 'now-1d', to: 'now' });
 
   expect(input.panels).toEqual({
     content1: {
@@ -313,6 +356,122 @@ test('it should create section with a dynamic dashboard as content', async () =>
         h: 5,
         i: 'ce24dd10-eb8a-11ed-8e00-17d7d50cd7b2',
         w: 48,
+        x: 0,
+        y: 0,
+      },
+      type: 'visualization',
+    },
+  });
+});
+
+test('it renders content with custom width and height', async () => {
+  const customWidth = 24;
+  const customHeight = 20;
+  const section: Section = { id: 'section1', kind: 'dashboard', order: 10 };
+  const staticViz: Content = {
+    id: 'content1',
+    kind: 'visualization',
+    order: 0,
+    width: customWidth,
+    height: customHeight,
+    input: {
+      kind: 'static',
+      id: 'viz-id-static',
+    },
+  };
+
+  const clientMock = coreMock.createStart().savedObjects.client;
+  const input = await createDashboardInput(section, [staticViz], {
+    savedObjectsClient: clientMock,
+  });
+
+  expect(input.panels).toEqual({
+    content1: {
+      explicitInput: {
+        disabledActions: ['togglePanel'],
+        id: 'content1',
+        savedObjectId: 'viz-id-static',
+      },
+      gridData: {
+        i: 'content1',
+        h: customHeight,
+        w: customWidth,
+        x: 0,
+        y: 0,
+      },
+      type: 'visualization',
+    },
+  });
+});
+
+test('it uses default width if custom content width is <= 0', async () => {
+  const customWidthShouldBeBiggerThan0 = 0;
+  const section: Section = { id: 'section1', kind: 'dashboard', order: 10 };
+  const staticViz: Content = {
+    id: 'content1',
+    kind: 'visualization',
+    order: 0,
+    width: customWidthShouldBeBiggerThan0,
+    input: {
+      kind: 'static',
+      id: 'viz-id-static',
+    },
+  };
+
+  const clientMock = coreMock.createStart().savedObjects.client;
+  const input = await createDashboardInput(section, [staticViz], {
+    savedObjectsClient: clientMock,
+  });
+
+  expect(input.panels).toEqual({
+    content1: {
+      explicitInput: {
+        disabledActions: ['togglePanel'],
+        id: 'content1',
+        savedObjectId: 'viz-id-static',
+      },
+      gridData: {
+        h: 15,
+        i: 'content1',
+        w: DASHBOARD_PANEL_WIDTH,
+        x: 0,
+        y: 0,
+      },
+      type: 'visualization',
+    },
+  });
+});
+
+test('it should use default width if custom content width > DASHBOARD_GRID_COLUMN_COUNT: 48', async () => {
+  const customWidthShouldNotBeBiggerThan0 = 49;
+  const section: Section = { id: 'section1', kind: 'dashboard', order: 10 };
+  const staticViz: Content = {
+    id: 'content1',
+    kind: 'visualization',
+    order: 0,
+    width: customWidthShouldNotBeBiggerThan0,
+    input: {
+      kind: 'static',
+      id: 'viz-id-static',
+    },
+  };
+
+  const clientMock = coreMock.createStart().savedObjects.client;
+  const input = await createDashboardInput(section, [staticViz], {
+    savedObjectsClient: clientMock,
+  });
+
+  expect(input.panels).toEqual({
+    content1: {
+      explicitInput: {
+        disabledActions: ['togglePanel'],
+        id: 'content1',
+        savedObjectId: 'viz-id-static',
+      },
+      gridData: {
+        h: 15,
+        i: 'content1',
+        w: DASHBOARD_PANEL_WIDTH,
         x: 0,
         y: 0,
       },

@@ -86,8 +86,14 @@ export interface WorkspaceFormProps {
   detailTab?: DetailTab;
   dataSourceManagement?: DataSourceManagementPluginSetup;
   availableUseCases: WorkspaceUseCase[];
+  detailTitle?: string;
 }
 
 export interface WorkspaceDetailedFormProps extends WorkspaceFormProps {
   defaultValues?: WorkspaceFormData;
+}
+
+export interface AvailableUseCaseItem
+  extends Pick<WorkspaceUseCase, 'id' | 'title' | 'features' | 'description' | 'systematic'> {
+  disabled?: boolean;
 }
