@@ -29,9 +29,11 @@ import S3Logo from '../../assets/s3_logo.svg';
 
 interface OpenSearchConnectionTableProps {
   isDashboardAdmin: boolean;
-  connectionType: string;
+  connectionType?: string;
   dataSourceConnections: DataSourceConnection[];
-  handleUnassignDataSources: (dataSources: DataSourceConnection[]) => Promise<void>;
+  inCreatePage?: boolean;
+  handleUnassignDataSources: (dataSources: DataSourceConnection[]) => Promise<void> | void;
+  getSelectedItems?: (dataSources: DataSourceConnection[]) => void;
 }
 
 export const OpenSearchConnectionTable = ({
@@ -39,10 +41,18 @@ export const OpenSearchConnectionTable = ({
   connectionType,
   dataSourceConnections,
   handleUnassignDataSources,
+  getSelectedItems,
+  inCreatePage = false,
 }: OpenSearchConnectionTableProps) => {
   const [selectedItems, setSelectedItems] = useState<DataSourceConnection[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [popoversState, setPopoversState] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (inCreatePage && getSelectedItems) {
+      getSelectedItems(selectedItems);
+    }
+  }, [selectedItems, getSelectedItems, inCreatePage]);
 
   useEffect(() => {
     // Reset selected items when connectionType changes
@@ -127,7 +137,7 @@ export const OpenSearchConnectionTable = ({
     {
       field: 'name',
       name: i18n.translate('workspace.detail.dataSources.table.title', {
-        defaultMessage: 'Title',
+        defaultMessage: 'Data source',
       }),
       truncateText: true,
       render: (name: string, record) => {
@@ -250,19 +260,31 @@ export const OpenSearchConnectionTable = ({
 
   return (
     <>
-      <EuiInMemoryTable
-        items={filteredDataSources}
-        itemId="id"
-        columns={columns}
-        selection={selection}
-        search={search}
-        key={connectionType}
-        isSelectable={true}
-        pagination={{
-          initialPageSize: 10,
-          pageSizeOptions: [10, 20, 30],
-        }}
-      />
+      {inCreatePage ? (
+        <EuiInMemoryTable
+          items={filteredDataSources}
+          itemId="id"
+          columns={columns}
+          selection={selection}
+          key={connectionType}
+          isSelectable={true}
+        />
+      ) : (
+        <EuiInMemoryTable
+          items={filteredDataSources}
+          itemId="id"
+          columns={columns}
+          selection={selection}
+          search={search}
+          key={connectionType}
+          isSelectable={true}
+          pagination={{
+            initialPageSize: 10,
+            pageSizeOptions: [10, 20, 30],
+          }}
+        />
+      )}
+
       <EuiSpacer />
       {modalVisible && (
         <EuiConfirmModal

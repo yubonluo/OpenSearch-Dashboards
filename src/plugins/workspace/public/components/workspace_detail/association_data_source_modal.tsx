@@ -81,7 +81,7 @@ export interface AssociationDataSourceModalProps {
   savedObjects: SavedObjectsStart;
   assignedConnections: DataSourceConnection[];
   closeModal: () => void;
-  handleAssignDataSourceConnections: (connections: DataSourceConnection[]) => Promise<void>;
+  handleAssignDataSourceConnections: (connections: DataSourceConnection[]) => Promise<void> | void;
 }
 
 export const AssociationDataSourceModal = ({

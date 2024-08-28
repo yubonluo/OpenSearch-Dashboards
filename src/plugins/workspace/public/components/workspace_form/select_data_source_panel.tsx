@@ -3,149 +3,131 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  EuiSmallButton,
-  EuiCompressedFormRow,
   EuiSpacer,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiButtonIcon,
-  EuiCompressedComboBox,
-  EuiComboBoxOptionOption,
   EuiFormLabel,
+  EuiText,
+  EuiFlexItem,
+  EuiSmallButton,
+  EuiFlexGroup,
 } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
-import { SavedObjectsStart } from '../../../../../core/public';
-import { getDataSourcesList } from '../../utils';
-import { DataSource } from '../../../common/types';
+import { SavedObjectsStart, CoreStart } from '../../../../../core/public';
+import { DataSourceConnection } from '../../../common/types';
 import { WorkspaceFormError } from './types';
+import { AssociationDataSourceModal } from '../workspace_detail/association_data_source_modal';
+import { OpenSearchConnectionTable } from '../workspace_detail/opensearch_connections_table';
+import { useOpenSearchDashboards } from '../../../../opensearch_dashboards_react/public';
+import { WorkspaceClient } from '../../workspace_client';
 
 export interface SelectDataSourcePanelProps {
   errors?: { [key: number]: WorkspaceFormError };
   savedObjects: SavedObjectsStart;
-  selectedDataSources: DataSource[];
-  onChange: (value: DataSource[]) => void;
+  assignedDataSources: DataSourceConnection[];
+  onChange: (value: DataSourceConnection[]) => void;
+  isDashboardAdmin: boolean;
 }
 
 export const SelectDataSourcePanel = ({
   errors,
   onChange,
-  selectedDataSources,
+  assignedDataSources,
   savedObjects,
+  isDashboardAdmin,
 }: SelectDataSourcePanelProps) => {
-  const [dataSourcesOptions, setDataSourcesOptions] = useState<EuiComboBoxOptionOption[]>([]);
-  useEffect(() => {
-    if (!savedObjects) return;
-    getDataSourcesList(savedObjects.client, ['*']).then((result) => {
-      const options = result.map(({ title, id }) => ({
-        label: title,
-        value: id,
-      }));
-      setDataSourcesOptions(options);
-    });
-  }, [savedObjects, setDataSourcesOptions]);
-  const handleAddNewOne = useCallback(() => {
-    onChange?.([
-      ...selectedDataSources,
-      {
-        title: '',
-        id: '',
-      },
-    ]);
-  }, [onChange, selectedDataSources]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<DataSourceConnection[]>([]);
+  const {
+    services: { notifications, http },
+  } = useOpenSearchDashboards<{ CoreStart: CoreStart; workspaceClient: WorkspaceClient }>();
 
-  const handleSelect = useCallback(
-    (selectedOptions, index) => {
-      const newOption = selectedOptions[0]
-        ? // Select new data source
-          {
-            title: selectedOptions[0].label,
-            id: selectedOptions[0].value,
-          }
-        : // Click reset button
-          {
-            title: '',
-            id: '',
-          };
-      const newSelectedOptions = [...selectedDataSources];
-      newSelectedOptions.splice(index, 1, newOption);
+  const handleAssignDataSources = (dataSources: DataSourceConnection[]) => {
+    setModalVisible(false);
+    const savedDataSources: DataSourceConnection[] = [...assignedDataSources, ...dataSources];
+    onChange(savedDataSources);
+  };
 
-      onChange(newSelectedOptions);
-    },
-    [onChange, selectedDataSources]
+  const handleUnassignDataSources = (dataSources: DataSourceConnection[]) => {
+    const savedDataSources = (assignedDataSources ?? [])?.filter(
+      ({ id }: DataSourceConnection) => !dataSources.some((item) => item.id === id)
+    );
+    onChange(savedDataSources);
+  };
+
+  const renderTableContent = () => {
+    return (
+      <OpenSearchConnectionTable
+        isDashboardAdmin={isDashboardAdmin}
+        dataSourceConnections={assignedDataSources}
+        handleUnassignDataSources={handleUnassignDataSources}
+        getSelectedItems={getSelectedItems}
+        inCreatePage={true}
+        connectionType="openSearchConnections"
+      />
+    );
+  };
+
+  const associationButton = (
+    <EuiSmallButton
+      iconType="plusInCircle"
+      onClick={() => setModalVisible(true)}
+      data-test-subj="workspace-creator-dataSources-assign-button"
+    >
+      {i18n.translate('workspace.form.selectDataSourcePanel.addNew', {
+        defaultMessage: 'Add data sources',
+      })}
+    </EuiSmallButton>
   );
 
-  const handleDelete = useCallback(
-    (index) => {
-      const newSelectedOptions = [...selectedDataSources];
-      newSelectedOptions.splice(index, 1);
-
-      onChange(newSelectedOptions);
-    },
-    [onChange, selectedDataSources]
+  const removeButton = (
+    <EuiSmallButton
+      iconType="unlink"
+      color="danger"
+      onClick={() => {
+        handleUnassignDataSources(selectedItems);
+      }}
+      data-test-subj="workspace-creator-dataSources-assign-button"
+    >
+      {i18n.translate('workspace.form.selectDataSourcePanel.remove', {
+        defaultMessage: 'Remove selected',
+      })}
+    </EuiSmallButton>
   );
+
+  const getSelectedItems = (currentSelectedItems: DataSourceConnection[]) =>
+    setSelectedItems(currentSelectedItems);
 
   return (
     <div>
       <EuiFormLabel>
-        {i18n.translate('workspace.form.selectDataSource.subTitle', {
-          defaultMessage: 'Data source',
-        })}
+        <EuiText size="xs">
+          {i18n.translate('workspace.form.selectDataSource.subTitle', {
+            defaultMessage: 'Add data sources that will be available in the workspace',
+          })}
+        </EuiText>
       </EuiFormLabel>
-      <EuiSpacer size="s" />
-      {selectedDataSources.map(({ id, title }, index) => (
-        <EuiCompressedFormRow
-          key={index}
-          isInvalid={!!errors?.[index]}
-          error={errors?.[index]?.message}
-          fullWidth
-        >
-          <EuiFlexGroup alignItems="flexEnd" gutterSize="m">
-            <EuiFlexItem style={{ maxWidth: 400 }}>
-              <EuiCompressedComboBox
-                data-test-subj="workspaceForm-select-dataSource-comboBox"
-                singleSelection
-                options={dataSourcesOptions}
-                selectedOptions={
-                  id
-                    ? [
-                        {
-                          label: title,
-                          value: id,
-                        },
-                      ]
-                    : []
-                }
-                onChange={(selectedOptions) => handleSelect(selectedOptions, index)}
-                placeholder="Select"
-              />
-            </EuiFlexItem>
-            <EuiFlexItem style={{ maxWidth: 332 }}>
-              <EuiButtonIcon
-                color="danger"
-                aria-label="Delete data source"
-                iconType="trash"
-                display="empty"
-                size="m"
-                onClick={() => handleDelete(index)}
-                isDisabled={false}
-              />
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        </EuiCompressedFormRow>
-      ))}
-
-      <EuiSmallButton
-        fill
-        fullWidth={false}
-        onClick={handleAddNewOne}
-        data-test-subj={`workspaceForm-select-dataSource-addNew`}
-      >
-        {i18n.translate('workspace.form.selectDataSourcePanel.addNew', {
-          defaultMessage: 'Add New',
-        })}
-      </EuiSmallButton>
+      <EuiSpacer size="m" />
+      <EuiFlexGroup alignItems="center">
+        {isDashboardAdmin && selectedItems.length > 0 && assignedDataSources.length > 0 && (
+          <EuiFlexItem grow={false}>{removeButton}</EuiFlexItem>
+        )}
+        {isDashboardAdmin && <EuiFlexItem grow={false}>{associationButton}</EuiFlexItem>}
+      </EuiFlexGroup>
+      <EuiSpacer size="xs" />
+      <EuiFlexItem style={{ maxWidth: 800 }}>
+        {assignedDataSources.length > 0 && renderTableContent()}
+      </EuiFlexItem>
+      {modalVisible && (
+        <AssociationDataSourceModal
+          savedObjects={savedObjects}
+          assignedConnections={assignedDataSources}
+          closeModal={() => setModalVisible(false)}
+          handleAssignDataSourceConnections={handleAssignDataSources}
+          http={http}
+          notifications={notifications}
+        />
+      )}
     </div>
   );
 };
