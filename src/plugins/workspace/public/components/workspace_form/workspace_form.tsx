@@ -48,7 +48,7 @@ export const WorkspaceForm = (props: WorkspaceFormProps) => {
   const disabledUserOrGroupInputIdsRef = useRef(
     defaultValues?.permissionSettings?.map((item) => item.id) ?? []
   );
-  const isDashboardAdmin = application?.capabilities?.dashboards?.isDashboardAdmin ?? false;
+  const isDashboardAdmin = !!application?.capabilities?.dashboards?.isDashboardAdmin;
   const handleNameInputChange = useCallback(
     (newName) => {
       setName(newName);
@@ -140,8 +140,9 @@ export const WorkspaceForm = (props: WorkspaceFormProps) => {
             errors={formErrors.selectedDataSources}
             onChange={setSelectedDataSources}
             savedObjects={savedObjects}
-            selectedDataSources={formData.selectedDataSources}
+            assignedDataSources={formData.selectedDataSources}
             data-test-subj={`workspaceForm-dataSourcePanel`}
+            isDashboardAdmin={isDashboardAdmin}
           />
         </EuiPanel>
       )}

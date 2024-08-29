@@ -32,9 +32,11 @@ import { AssociationDataSourceModalTab } from '../../../common/constants';
 
 interface OpenSearchConnectionTableProps {
   isDashboardAdmin: boolean;
-  connectionType: string;
+  connectionType?: string;
   dataSourceConnections: DataSourceConnection[];
-  handleUnassignDataSources: (dataSources: DataSourceConnection[]) => Promise<void>;
+  inCreatePage?: boolean;
+  handleUnassignDataSources: (dataSources: DataSourceConnection[]) => Promise<void> | void;
+  getSelectedItems?: (dataSources: DataSourceConnection[]) => void;
 }
 
 export const OpenSearchConnectionTable = ({
@@ -42,6 +44,8 @@ export const OpenSearchConnectionTable = ({
   connectionType,
   dataSourceConnections,
   handleUnassignDataSources,
+  getSelectedItems,
+  inCreatePage = false,
 }: OpenSearchConnectionTableProps) => {
   const [selectedItems, setSelectedItems] = useState<DataSourceConnection[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -49,6 +53,12 @@ export const OpenSearchConnectionTable = ({
   const [itemIdToExpandedRowMap, setItemIdToExpandedRowMap] = useState<
     Record<string, React.ReactNode>
   >({});
+
+  useEffect(() => {
+    if (inCreatePage && getSelectedItems) {
+      getSelectedItems(selectedItems);
+    }
+  }, [selectedItems, getSelectedItems, inCreatePage]);
 
   useEffect(() => {
     // Reset selected items when connectionType changes
@@ -162,7 +172,7 @@ export const OpenSearchConnectionTable = ({
       width: '25%',
       field: 'name',
       name: i18n.translate('workspace.detail.dataSources.table.title', {
-        defaultMessage: 'Title',
+        defaultMessage: 'Data source',
       }),
       truncateText: true,
       render: (name: string, record) => {
@@ -274,7 +284,11 @@ export const OpenSearchConnectionTable = ({
                 type: 'icon',
                 onClick: (item: DataSourceConnection) => {
                   setSelectedItems([item]);
-                  setModalVisible(true);
+                  if (inCreatePage) {
+                    handleUnassignDataSources([item]);
+                  } else {
+                    setModalVisible(true);
+                  }
                 },
                 'data-test-subj': 'workspace-detail-dataSources-table-actions-remove',
               },
@@ -291,23 +305,36 @@ export const OpenSearchConnectionTable = ({
 
   return (
     <>
-      <EuiInMemoryTable
-        items={filteredDataSources}
-        itemId="id"
-        columns={columns}
-        selection={selection}
-        search={search}
-        key={connectionType}
-        isSelectable={true}
-        itemIdToExpandedRowMap={itemIdToExpandedRowMap}
-        isExpandable={true}
-        pagination={{
-          initialPageSize: 10,
-          pageSizeOptions: [10, 20, 30],
-        }}
-      />
+      {inCreatePage ? (
+        <EuiInMemoryTable
+          items={filteredDataSources}
+          itemId="id"
+          columns={columns}
+          selection={selection}
+          key={connectionType}
+          isSelectable={true}
+          itemIdToExpandedRowMap={itemIdToExpandedRowMap}
+          isExpandable={true}
+        />
+      ) : (
+        <EuiInMemoryTable
+          items={filteredDataSources}
+          itemId="id"
+          columns={columns}
+          selection={selection}
+          search={search}
+          key={connectionType}
+          isSelectable={true}
+          itemIdToExpandedRowMap={itemIdToExpandedRowMap}
+          isExpandable={true}
+          pagination={{
+            initialPageSize: 10,
+            pageSizeOptions: [10, 20, 30],
+          }}
+        />
+      )}
       <EuiSpacer />
-      {modalVisible && (
+      {modalVisible && !inCreatePage && (
         <EuiConfirmModal
           data-test-subj="workspaceForm-cancelModal"
           title={i18n.translate('workspace.detail.dataSources.modal.title', {
