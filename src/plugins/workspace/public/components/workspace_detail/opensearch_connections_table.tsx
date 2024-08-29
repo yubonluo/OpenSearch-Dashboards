@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import './data_source_table.scss';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   EuiSpacer,
@@ -21,11 +22,13 @@ import {
   EuiPopoverTitle,
   EuiSmallButton,
   EuiLink,
+  EuiButtonIcon,
 } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
 import { DataSourceConnection, DataSourceConnectionType } from '../../../common/types';
 import PrometheusLogo from '../../assets/prometheus_logo.svg';
 import S3Logo from '../../assets/s3_logo.svg';
+import { AssociationDataSourceModalTab } from '../../../common/constants';
 
 interface OpenSearchConnectionTableProps {
   isDashboardAdmin: boolean;
@@ -47,6 +50,9 @@ export const OpenSearchConnectionTable = ({
   const [selectedItems, setSelectedItems] = useState<DataSourceConnection[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [popoversState, setPopoversState] = useState<Record<string, boolean>>({});
+  const [itemIdToExpandedRowMap, setItemIdToExpandedRowMap] = useState<
+    Record<string, React.ReactNode>
+  >({});
 
   useEffect(() => {
     if (inCreatePage && getSelectedItems) {
@@ -57,22 +63,14 @@ export const OpenSearchConnectionTable = ({
   useEffect(() => {
     // Reset selected items when connectionType changes
     setSelectedItems([]);
+    setItemIdToExpandedRowMap({});
   }, [connectionType, setSelectedItems]);
 
   const filteredDataSources = useMemo(() => {
-    // Reset the item when switching connectionType.
-    setSelectedItems([]);
-    if (connectionType === 'openSearchConnections') {
-      return dataSourceConnections.filter(
-        (dqc) => dqc.connectionType === DataSourceConnectionType.OpenSearchConnection
-      );
-    } else if (connectionType === 'directQueryConnections') {
-      return dataSourceConnections.filter(
-        (dqc) => dqc.connectionType === DataSourceConnectionType.DirectQueryConnection
-      );
-    }
-    return dataSourceConnections;
-  }, [connectionType, dataSourceConnections]);
+    return dataSourceConnections.filter(
+      (dqc) => dqc.connectionType === DataSourceConnectionType.OpenSearchConnection
+    );
+  }, [dataSourceConnections]);
 
   const renderToolsLeft = useCallback(() => {
     return selectedItems.length > 0 && !modalVisible
@@ -118,9 +116,9 @@ export const OpenSearchConnectionTable = ({
 
   const directQueryConnectionIcon = (connector: string | undefined) => {
     switch (connector) {
-      case 'S3GLUE':
+      case 'Amazon S3':
         return <EuiIcon type={S3Logo} />;
-      case 'PROMETHEUS':
+      case 'Prometheus':
         return <EuiIcon type={PrometheusLogo} />;
       default:
         return <></>;
@@ -133,8 +131,45 @@ export const OpenSearchConnectionTable = ({
     }));
   };
 
-  const columns: Array<EuiBasicTableColumn<DataSourceConnection>> = [
+  const toggleDetails = (item: DataSourceConnection) => {
+    const itemIdToExpandedRowMapValues = { ...itemIdToExpandedRowMap };
+    if (itemIdToExpandedRowMapValues[item.id]) {
+      delete itemIdToExpandedRowMapValues[item.id];
+    } else {
+      itemIdToExpandedRowMapValues[item.id] = (
+        <EuiInMemoryTable
+          items={item?.relatedConnections ?? []}
+          itemId="id"
+          columns={baseColumns}
+          className="customized-table"
+          rowProps={{
+            className: 'customized-row',
+          }}
+        />
+      );
+    }
+    setItemIdToExpandedRowMap(itemIdToExpandedRowMapValues);
+  };
+
+  const baseColumns: Array<EuiBasicTableColumn<DataSourceConnection>> = [
+    ...(connectionType === AssociationDataSourceModalTab.DirectQueryConnections
+      ? [
+          {
+            width: '40px',
+            isExpander: true,
+            render: (item: DataSourceConnection) =>
+              item?.relatedConnections?.length ? (
+                <EuiButtonIcon
+                  onClick={() => toggleDetails(item)}
+                  aria-label={itemIdToExpandedRowMap[item.id] ? 'Collapse' : 'Expand'}
+                  iconType={itemIdToExpandedRowMap[item.id] ? 'arrowUp' : 'arrowDown'}
+                />
+              ) : null,
+          },
+        ]
+      : []),
     {
+      width: '25%',
       field: 'name',
       name: i18n.translate('workspace.detail.dataSources.table.title', {
         defaultMessage: 'Data source',
@@ -144,9 +179,9 @@ export const OpenSearchConnectionTable = ({
         const origin = window.location.origin;
         let url: string;
         if (record.connectionType === DataSourceConnectionType.OpenSearchConnection) {
-          url = `${origin}/app/dataSources_core/${record.id}`;
+          url = `${origin}/app/dataSources/${record.id}`;
         } else {
-          url = `${origin}/app/dataSources_core/manage/${name}?dataSourceMDSId=${record.parentId}`;
+          url = `${origin}/app/dataSources/manage/${name}?dataSourceMDSId=${record.parentId}`;
         }
         return (
           <EuiLink href={url} className="eui-textTruncate">
@@ -156,6 +191,7 @@ export const OpenSearchConnectionTable = ({
       },
     },
     {
+      width: '10%',
       field: 'type',
       name: i18n.translate('workspace.detail.dataSources.table.type', {
         defaultMessage: 'Type',
@@ -163,6 +199,7 @@ export const OpenSearchConnectionTable = ({
       truncateText: true,
     },
     {
+      width: '35%',
       field: 'description',
       name: i18n.translate('workspace.detail.dataSources.table.description', {
         defaultMessage: 'Description',
@@ -221,6 +258,10 @@ export const OpenSearchConnectionTable = ({
           <EuiText>—</EuiText>
         ),
     },
+  ];
+
+  const columns: Array<EuiBasicTableColumn<DataSourceConnection>> = [
+    ...baseColumns,
     ...(isDashboardAdmin
       ? [
           {
@@ -252,7 +293,7 @@ export const OpenSearchConnectionTable = ({
                 'data-test-subj': 'workspace-detail-dataSources-table-actions-remove',
               },
             ],
-          } as EuiTableActionsColumnType<any>,
+          } as EuiTableActionsColumnType<DataSourceConnection>,
         ]
       : []),
   ];
@@ -272,6 +313,8 @@ export const OpenSearchConnectionTable = ({
           selection={selection}
           key={connectionType}
           isSelectable={true}
+          itemIdToExpandedRowMap={itemIdToExpandedRowMap}
+          isExpandable={true}
         />
       ) : (
         <EuiInMemoryTable
@@ -282,13 +325,14 @@ export const OpenSearchConnectionTable = ({
           search={search}
           key={connectionType}
           isSelectable={true}
+          itemIdToExpandedRowMap={itemIdToExpandedRowMap}
+          isExpandable={true}
           pagination={{
             initialPageSize: 10,
             pageSizeOptions: [10, 20, 30],
           }}
         />
       )}
-
       <EuiSpacer />
       {modalVisible && !inCreatePage && (
         <EuiConfirmModal

@@ -20,6 +20,7 @@ import { AssociationDataSourceModal } from '../workspace_detail/association_data
 import { OpenSearchConnectionTable } from '../workspace_detail/opensearch_connections_table';
 import { useOpenSearchDashboards } from '../../../../opensearch_dashboards_react/public';
 import { WorkspaceClient } from '../../workspace_client';
+import { AssociationDataSourceModalTab } from '../../../common/constants';
 
 export interface SelectDataSourcePanelProps {
   errors?: { [key: number]: WorkspaceFormError };
@@ -63,6 +64,7 @@ export const SelectDataSourcePanel = ({
         handleUnassignDataSources={handleUnassignDataSources}
         getSelectedItems={getSelectedItems}
         inCreatePage={true}
+        connectionType={AssociationDataSourceModalTab.DirectQueryConnections}
       />
     );
   };

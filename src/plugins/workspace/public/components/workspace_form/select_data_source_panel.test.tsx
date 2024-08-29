@@ -33,6 +33,7 @@ const dataSources = [
     description: 'ds-3-description',
     auth: '',
     dataSourceEngineType: '',
+    workspaces: [],
   },
   {
     id: 'id4',
@@ -40,6 +41,7 @@ const dataSources = [
     description: 'ds-4-description',
     auth: '',
     dataSourceEngineType: '',
+    workspaces: [],
   },
 ];
 
