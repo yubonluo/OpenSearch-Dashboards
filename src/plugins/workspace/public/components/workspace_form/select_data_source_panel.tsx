@@ -63,7 +63,6 @@ export const SelectDataSourcePanel = ({
         handleUnassignDataSources={handleUnassignDataSources}
         getSelectedItems={getSelectedItems}
         inCreatePage={true}
-        connectionType="openSearchConnections"
       />
     );
   };

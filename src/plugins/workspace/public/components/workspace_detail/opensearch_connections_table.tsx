@@ -243,7 +243,11 @@ export const OpenSearchConnectionTable = ({
                 type: 'icon',
                 onClick: (item: DataSourceConnection) => {
                   setSelectedItems([item]);
-                  setModalVisible(true);
+                  if (inCreatePage) {
+                    handleUnassignDataSources([item]);
+                  } else {
+                    setModalVisible(true);
+                  }
                 },
                 'data-test-subj': 'workspace-detail-dataSources-table-actions-remove',
               },
@@ -286,7 +290,7 @@ export const OpenSearchConnectionTable = ({
       )}
 
       <EuiSpacer />
-      {modalVisible && (
+      {modalVisible && !inCreatePage && (
         <EuiConfirmModal
           data-test-subj="workspaceForm-cancelModal"
           title={i18n.translate('workspace.detail.dataSources.modal.title', {
