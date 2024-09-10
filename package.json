@@ -65,7 +65,7 @@
     "start": "scripts/use_node scripts/opensearch_dashboards --dev",
     "start:docker": "scripts/use_node scripts/opensearch_dashboards --dev --opensearch.hosts=$OPENSEARCH_HOSTS --opensearch.ignoreVersionMismatch=true --server.host=$SERVER_HOST",
     "start:security": "scripts/use_node scripts/opensearch_dashboards --dev --security",
-    "start:enhancements": "scripts/use_node scripts/opensearch_dashboards --dev --uiSettings.overrides['query:enhancements:enabled']=true --uiSettings.overrides['home:useNewHomePage']=true --uiSettings.overrides['state:storeInSessionStorage']=true",
+    "start:enhancements": "scripts/use_node scripts/opensearch_dashboards --dev --uiSettings.overrides['query:enhancements:enabled']=true --uiSettings.overrides['home:useNewHomePage']=true",
     "debug": "scripts/use_node --nolazy --inspect scripts/opensearch_dashboards --dev",
     "debug-break": "scripts/use_node --nolazy --inspect-brk scripts/opensearch_dashboards --dev",
     "lint": "yarn run lint:es && yarn run lint:style",
@@ -85,7 +85,8 @@
     "cypress:run-with-security": "env TZ=America/Los_Angeles NO_COLOR=1 cypress run --headless --env SECURITY_ENABLED=true,openSearchUrl=https://localhost:9200,WAIT_FOR_LOADER_BUFFER_MS=500",
     "osd:ciGroup10": "echo \"dashboard_sanity_test_spec.js\"",
     "osd:ciGroup11": "echo \"apps/vis_builder/*.js\"",
-    "generate:opensearchsqlantlr": "./node_modules/antlr4ng-cli/index.js -Dlanguage=TypeScript -o ./src/plugins/data/public/antlr/opensearch_sql/.generated -visitor -no-listener -Xexact-output-dir ./src/plugins/data/public/antlr/opensearch_sql/grammar/OpenSearchSQLLexer.g4 ./src/plugins/data/public/antlr/opensearch_sql/grammar/OpenSearchSQLParser.g4"
+    "generate:opensearchsqlantlr": "./node_modules/antlr4ng-cli/index.js -Dlanguage=TypeScript -o ./src/plugins/data/public/antlr/opensearch_sql/.generated -visitor -no-listener -Xexact-output-dir ./src/plugins/data/public/antlr/opensearch_sql/grammar/OpenSearchSQLLexer.g4 ./src/plugins/data/public/antlr/opensearch_sql/grammar/OpenSearchSQLParser.g4",
+    "generate:opensearchpplantlr": "./node_modules/antlr4ng-cli/index.js -Dlanguage=TypeScript -o ./src/plugins/data/public/antlr/opensearch_ppl/.generated -visitor -no-listener -Xexact-output-dir ./src/plugins/data/public/antlr/opensearch_ppl/grammar/OpenSearchPPLLexer.g4 ./src/plugins/data/public/antlr/opensearch_ppl/grammar/OpenSearchPPLParser.g4"
   },
   "repository": {
     "type": "git",
@@ -144,7 +145,7 @@
   "dependencies": {
     "@aws-crypto/client-node": "^3.1.1",
     "@elastic/datemath": "5.0.3",
-    "@elastic/eui": "npm:@opensearch-project/oui@1.11.0",
+    "@elastic/eui": "npm:@opensearch-project/oui@1.12.0",
     "@elastic/good": "^9.0.1-kibana3",
     "@elastic/numeral": "npm:@amoo-miki/numeral@2.6.0",
     "@elastic/request-crypto": "2.0.0",
@@ -190,7 +191,7 @@
     "core-js": "^3.6.5",
     "deep-freeze-strict": "^1.1.1",
     "del": "^6.1.1",
-    "dns-sync": "^0.2.1",
+    "dns-sync": "npm:@amoo-miki/dns-sync@^0.2.1",
     "elastic-apm-node": "^3.43.0",
     "elasticsearch": "^16.7.0",
     "execa": "^4.0.2",

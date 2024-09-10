@@ -102,7 +102,7 @@
   }
 }
 
-.osdQueryEditor__dataSetNavigatorWrapper {
+.osdQueryEditor__datasetSelectorWrapper {
   :first-child {
     border-bottom: $euiBorderThin !important;
   }
@@ -150,14 +150,28 @@
   }
 }
 
+.osdQueryEditor__header {
+  display: flex;
+  align-items: center;
+
+  .osdQueryEditorExtensionComponent {
+    padding: 0 $euiSizeXS $euiSizeXS;
+  }
+}
+
 .osdQueryEditor__topBar {
   display: flex;
   align-items: center;
   padding: $euiSizeXS;
 
-  .osdQueryEditor__collapseBtn {
-    padding-right: $euiSizeXS;
-    border-right: $euiBorderThin;
+  > * {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .osdQueryEditor__querycontrols {
+    float: right;
+    margin: $euiSizeS $euiSizeS;
   }
 
   .osdQueryEditor__dataSetPicker {
@@ -188,9 +202,29 @@
 .osdQuerEditor__singleLine {
   padding: $euiSizeS;
   background-color: $euiColorEmptyShade;
-  border: $euiBorderThin;
+  overflow: initial !important; // needed for suggestion window, otherwise will be hidden in child
 
   .monaco-editor .view-overlays .current-line {
     border: none;
+  }
+}
+
+.suggest-widget {
+  position: relative;
+
+  &.visible::after {
+    position: absolute;
+    height: auto;
+    bottom: auto;
+    left: 0;
+    width: 100%;
+    background-color: $euiColorLightestShade;
+    border: $euiBorderThin;
+    padding: $euiSizeXS;
+    text-align: left;
+    color: $euiColorDarkShade;
+    font-size: $euiFontSizeXS;
+    content: "Tab to insert, ESC to close window";
+    display: block;
   }
 }

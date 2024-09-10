@@ -4,8 +4,8 @@
  */
 
 import {
-  EuiSuperSelect,
-  EuiColorPicker,
+  EuiCompressedSuperSelect,
+  EuiCompressedColorPicker,
   EuiCompressedFormRow,
   EuiDescribedFormGroup,
 } from '@elastic/eui';
@@ -64,7 +64,11 @@ export const WorkspaceDetailFormDetails = ({
       // Essential can be changed to other use cases;
       // Analytics (all) cannot be changed back to a single use case;
       // Other use cases can only be changed to Analytics (all) use case.
-      return currentUseCase === 'analytics' || id === 'all' || id === currentUseCase;
+      return (
+        currentUseCase === DEFAULT_NAV_GROUPS.essentials.id ||
+        id === DEFAULT_NAV_GROUPS.all.id ||
+        id === currentUseCase
+      );
     })
     .map((useCase) => ({
       value: useCase.id,
@@ -94,7 +98,6 @@ export const WorkspaceDetailFormDetails = ({
           value={formData.description}
           onChange={setDescription}
           readOnly={!isEditing}
-          error={formErrors.name?.message}
         />
       </EuiDescribedFormGroup>
       <EuiDescribedFormGroup title={<h3>{detailsUseCaseLabel}</h3>}>
@@ -104,7 +107,7 @@ export const WorkspaceDetailFormDetails = ({
           error={formErrors.features?.message}
           helpText={detailsUseCaseHelpText}
         >
-          <EuiSuperSelect
+          <EuiCompressedSuperSelect
             options={options}
             valueOfSelected={value}
             onChange={(id) => {
@@ -125,7 +128,7 @@ export const WorkspaceDetailFormDetails = ({
           isInvalid={!!formErrors.color}
           error={formErrors.color?.message}
         >
-          <EuiColorPicker
+          <EuiCompressedColorPicker
             color={formData.color}
             onChange={handleColorChange}
             readOnly={!isEditing}

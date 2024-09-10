@@ -12,7 +12,7 @@ import { cloneDeep } from 'lodash';
 import { useLocation } from 'react-router-dom';
 import { RequestAdapter } from '../../../../../inspector/public';
 import { DiscoverViewServices } from '../../../build_services';
-import { search } from '../../../../../data/public';
+import { QueryStatus, search } from '../../../../../data/public';
 import { validateTimeRange } from '../../helpers/validate_time_range';
 import { updateSearchSource } from './update_search_source';
 import { useIndexPattern } from './use_index_pattern';
@@ -39,6 +39,7 @@ export enum ResultStatus {
   LOADING = 'loading', // initial data load
   READY = 'ready', // results came back
   NO_RESULTS = 'none', // no results came back
+  ERROR = 'error', // error occurred
 }
 
 export interface SearchData {
@@ -50,6 +51,16 @@ export interface SearchData {
   bucketInterval?: TimechartHeaderBucketInterval | {};
   chartData?: Chart;
   title?: string;
+  queryStatus?: {
+    body?: {
+      error?: {
+        reason?: string;
+        details: string;
+      };
+      statusCode?: number;
+    };
+    elapsedMs?: number;
+  };
 }
 
 export type SearchRefetch = 'refetch' | undefined;
@@ -118,8 +129,8 @@ export const useSearch = (services: DiscoverViewServices) => {
   const refetch$ = useMemo(() => new Subject<SearchRefetch>(), []);
 
   const fetch = useCallback(async () => {
-    let dataSet = indexPattern;
-    if (!dataSet) {
+    let dataset = indexPattern;
+    if (!dataset) {
       data$.next({
         status: shouldSearchOnPageLoad() ? ResultStatus.LOADING : ResultStatus.UNINITIALIZED,
       });
@@ -136,18 +147,20 @@ export const useSearch = (services: DiscoverViewServices) => {
     // Abort any in-progress requests before fetching again
     if (fetchStateRef.current.abortController) fetchStateRef.current.abortController.abort();
     fetchStateRef.current.abortController = new AbortController();
-    const histogramConfigs = dataSet.timeFieldName
-      ? createHistogramConfigs(dataSet, interval || 'auto', data)
+    const histogramConfigs = dataset.timeFieldName
+      ? createHistogramConfigs(dataset, interval || 'auto', data)
       : undefined;
     const searchSource = await updateSearchSource({
-      indexPattern: dataSet,
+      indexPattern: dataset,
       services,
       sort,
       searchSource: savedSearch?.searchSource,
       histogramConfigs,
     });
 
-    dataSet = searchSource.getField('index');
+    dataset = searchSource.getField('index');
+
+    let elapsedMs;
 
     try {
       // Only show loading indicator if we are fetching when the rows are empty
@@ -180,10 +193,11 @@ export const useSearch = (services: DiscoverViewServices) => {
         .ok({ json: fetchResp });
       const hits = fetchResp.hits.total as number;
       const rows = fetchResp.hits.hits;
+      elapsedMs = inspectorRequest.getTime();
       let bucketInterval = {};
       let chartData;
       for (const row of rows) {
-        const fields = Object.keys(dataSet!.flattenHit(row));
+        const fields = Object.keys(dataset!.flattenHit(row));
         for (const fieldName of fields) {
           fetchStateRef.current.fieldCounts[fieldName] =
             (fetchStateRef.current.fieldCounts[fieldName] || 0) + 1;
@@ -216,17 +230,38 @@ export const useSearch = (services: DiscoverViewServices) => {
           indexPattern?.title !== searchSource.getDataFrame()?.name
             ? searchSource.getDataFrame()?.name
             : indexPattern?.title,
+        queryStatus: {
+          elapsedMs,
+        },
       });
     } catch (error) {
       // If the request was aborted then no need to surface this error in the UI
       if (error instanceof Error && error.name === 'AbortError') return;
 
-      data$.next({
-        status: ResultStatus.NO_RESULTS,
-        rows: [],
-      });
+      const queryLanguage = data.query.queryString.getQuery().language;
+      if (queryLanguage === 'kuery' || queryLanguage === 'lucene') {
+        data$.next({
+          status: ResultStatus.NO_RESULTS,
+          rows: [],
+        });
 
-      data.search.showError(error as Error);
+        data.search.showError(error as Error);
+        return;
+      }
+      let errorBody;
+      try {
+        errorBody = JSON.parse(error.body.message);
+      } catch (e) {
+        errorBody = error.body.message;
+      }
+
+      data$.next({
+        status: ResultStatus.ERROR,
+        queryStatus: {
+          body: errorBody,
+          elapsedMs,
+        },
+      });
     } finally {
       initalSearchComplete.current = true;
     }
@@ -251,8 +286,7 @@ export const useSearch = (services: DiscoverViewServices) => {
       timefilter.getFetch$(),
       timefilter.getTimeUpdate$(),
       timefilter.getAutoRefreshFetch$(),
-      data.query.queryString.getUpdates$(),
-      data.query.dataSetManager.getUpdates$()
+      data.query.queryString.getUpdates$()
     ).pipe(debounceTime(100));
 
     const subscription = fetch$.subscribe(() => {
@@ -282,7 +316,6 @@ export const useSearch = (services: DiscoverViewServices) => {
     fetch,
     core.fatalErrors,
     shouldSearchOnPageLoad,
-    data.query.dataSetManager,
   ]);
 
   // Get savedSearch if it exists

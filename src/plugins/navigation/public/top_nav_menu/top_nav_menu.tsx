@@ -35,6 +35,7 @@ import React, { ReactElement, useRef } from 'react';
 import { MountPoint } from '../../../../core/public';
 import {
   DataPublicPluginStart,
+  QueryStatus,
   SearchBarProps,
   StatefulSearchBarProps,
 } from '../../../data/public';
@@ -82,6 +83,7 @@ export type TopNavMenuProps = Omit<StatefulSearchBarProps, 'showDatePicker'> &
      * ```
      */
     setMenuMountPoint?: (menuMount: MountPoint | undefined) => void;
+    queryStatus?: QueryStatus;
   };
 
 /*
@@ -157,6 +159,7 @@ export function TopNavMenu(props: TopNavMenuProps): ReactElement | null {
         {...searchBarProps}
         showDatePicker={![TopNavMenuItemRenderType.OMITTED, false].includes(showDatePicker!)}
         {...overrides}
+        queryStatus={props.queryStatus}
       />
     );
   }
@@ -177,7 +180,7 @@ export function TopNavMenu(props: TopNavMenuProps): ReactElement | null {
                       <EuiText size="s">{screenTitle}</EuiText>
                     </EuiFlexItem>
                     <EuiFlexItem grow={false}>{renderMenu(menuClassName)}</EuiFlexItem>
-                    <EuiFlexItem>{renderSearchBar()}</EuiFlexItem>
+                    <EuiFlexItem>{renderSearchBar({ isFilterBarPortable: true })}</EuiFlexItem>
                   </EuiFlexGroup>
                 </MountPointPortal>
               </>
@@ -202,31 +205,20 @@ export function TopNavMenu(props: TopNavMenuProps): ReactElement | null {
 
           // Show the SearchBar in-place
           default:
-            if (showDatePicker === TopNavMenuItemRenderType.IN_PORTAL) {
-              return (
-                <>
-                  <MountPointPortal setMountPoint={setMenuMountPoint}>
-                    <EuiFlexGroup alignItems="stretch" gutterSize="none">
-                      <EuiFlexItem grow={false} className="osdTopNavMenuScreenTitle">
-                        <EuiText size="s">{screenTitle}</EuiText>
-                      </EuiFlexItem>
-                      <EuiFlexItem grow={false}>{renderMenu(menuClassName)}</EuiFlexItem>
-                      <EuiFlexItem className="globalDatePicker">
-                        <div ref={datePickerRef} />
-                      </EuiFlexItem>
-                    </EuiFlexGroup>
-                  </MountPointPortal>
-                  {renderSearchBar({ datePickerRef })}
-                </>
-              );
-            }
-
             return (
               <>
                 <MountPointPortal setMountPoint={setMenuMountPoint}>
-                  {renderMenu(menuClassName)}
+                  <EuiFlexGroup alignItems="stretch" gutterSize="none">
+                    <EuiFlexItem grow={false} className="osdTopNavMenuScreenTitle">
+                      <EuiText size="s">{screenTitle}</EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem grow={false}>{renderMenu(menuClassName)}</EuiFlexItem>
+                    <EuiFlexItem className="globalDatePicker">
+                      <div ref={datePickerRef} />
+                    </EuiFlexItem>
+                  </EuiFlexGroup>
                 </MountPointPortal>
-                {renderSearchBar()}
+                {renderSearchBar({ datePickerRef })}
               </>
             );
         }

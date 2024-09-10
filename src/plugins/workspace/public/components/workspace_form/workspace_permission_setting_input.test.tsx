@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, within } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import {
   WorkspacePermissionSettingInput,
   WorkspacePermissionSettingInputProps,
@@ -75,7 +75,7 @@ describe('WorkspacePermissionSettingInput', () => {
       modes: [WorkspacePermissionMode.LibraryRead, WorkspacePermissionMode.Read],
     });
 
-    expect(renderResult.getByText('foo')).toBeInTheDocument();
+    expect(renderResult.getByDisplayValue('foo')).toBeInTheDocument();
     expect(renderResult.getByText('Read')).toBeInTheDocument();
   });
   it('should render consistent group id and permission modes', () => {
@@ -85,18 +85,17 @@ describe('WorkspacePermissionSettingInput', () => {
       modes: [WorkspacePermissionMode.LibraryWrite, WorkspacePermissionMode.Read],
     });
 
-    expect(renderResult.getByText('bar')).toBeInTheDocument();
+    expect(renderResult.getByDisplayValue('bar')).toBeInTheDocument();
     expect(renderResult.getByText('Read & Write')).toBeInTheDocument();
   });
   it('should call onGroupOrUserIdChange with user id', () => {
     const { renderResult, onGroupOrUserIdChangeMock } = setup();
 
     expect(onGroupOrUserIdChangeMock).not.toHaveBeenCalled();
-    fireEvent.click(renderResult.getByText('Select a user'));
-    fireEvent.input(renderResult.getAllByTestId('comboBoxSearchInput')[0], {
+    fireEvent.change(renderResult.getAllByTestId('workspaceFormUserIdOrGroupInput')[0], {
       target: { value: 'user1' },
     });
-    fireEvent.blur(renderResult.getAllByTestId('comboBoxSearchInput')[0]);
+    fireEvent.blur(renderResult.getAllByTestId('workspaceFormUserIdOrGroupInput')[0]);
     expect(onGroupOrUserIdChangeMock).toHaveBeenCalledWith({ type: 'user', userId: 'user1' }, 0);
   });
   it('should call onGroupOrUserIdChange with group', () => {
@@ -105,32 +104,18 @@ describe('WorkspacePermissionSettingInput', () => {
     });
 
     expect(onGroupOrUserIdChangeMock).not.toHaveBeenCalled();
-    fireEvent.click(renderResult.getByText('Select a user group'));
-    fireEvent.input(renderResult.getAllByTestId('comboBoxSearchInput')[0], {
+    fireEvent.change(renderResult.getAllByTestId('workspaceFormUserIdOrGroupInput')[0], {
       target: { value: 'group' },
     });
-    fireEvent.blur(renderResult.getAllByTestId('comboBoxSearchInput')[0]);
+    fireEvent.blur(renderResult.getAllByTestId('workspaceFormUserIdOrGroupInput')[0]);
     expect(onGroupOrUserIdChangeMock).toHaveBeenCalledWith({ type: 'group', group: 'group' }, 0);
-  });
-
-  it('should call onGroupOrUserIdChange without user id after clear button clicked', () => {
-    const { renderResult, onGroupOrUserIdChangeMock } = setup({
-      userId: 'foo',
-    });
-
-    expect(onGroupOrUserIdChangeMock).not.toHaveBeenCalled();
-    fireEvent.click(renderResult.getByTestId('comboBoxClearButton'));
-    expect(onGroupOrUserIdChangeMock).toHaveBeenCalledWith({ type: 'user' }, 0);
   });
 
   it('should call onPermissionModesChange with permission modes after permission modes changed', () => {
     const { renderResult, onPermissionModesChangeMock } = setup({});
 
     expect(onPermissionModesChangeMock).not.toHaveBeenCalled();
-    const permissionToggleListButton = within(
-      renderResult.getAllByTestId('workspace-permissionModeOptions')[0]
-    ).getByTestId('comboBoxToggleListButton');
-    fireEvent.click(permissionToggleListButton);
+    fireEvent.click(renderResult.getAllByTestId('workspace-permissionModeOptions')[0]);
     fireEvent.click(renderResult.getByText('Owner'));
     expect(onPermissionModesChangeMock).toHaveBeenCalledWith(['library_write', 'write'], 0);
   });
@@ -148,7 +133,7 @@ describe('WorkspacePermissionSettingInput', () => {
     expect(onTypeChangeMock).not.toHaveBeenCalled();
 
     fireEvent.click(renderResult.getByTestId('workspace-typeOptions'));
-    fireEvent.click(renderResult.getByText('Group'));
+    fireEvent.click(renderResult.getByText('User Group'));
     expect(onTypeChangeMock).toHaveBeenCalledWith('group', 0);
   });
 });

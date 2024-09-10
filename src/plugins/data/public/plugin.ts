@@ -91,6 +91,7 @@ import { DefaultDslDataSource } from './data_sources/default_datasource';
 import { DEFAULT_DATA_SOURCE_TYPE } from './data_sources/constants';
 import { getSuggestions as getSQLSuggestions } from './antlr/opensearch_sql/code_completion';
 import { getSuggestions as getDQLSuggestions } from './antlr/dql/code_completion';
+import { getSuggestions as getPPLSuggestions } from './antlr/opensearch_ppl/code_completion';
 import { createStorage, DataStorage } from '../common';
 
 declare module '../../ui_actions/public' {
@@ -115,6 +116,7 @@ export class DataPublicPlugin
   private readonly fieldFormatsService: FieldFormatsService;
   private readonly queryService: QueryService;
   private readonly storage: DataStorage;
+  private readonly sessionStorage: DataStorage;
 
   constructor(initializerContext: PluginInitializerContext<ConfigSchema>) {
     this.searchService = new SearchService(initializerContext);
@@ -122,7 +124,11 @@ export class DataPublicPlugin
     this.queryService = new QueryService();
     this.fieldFormatsService = new FieldFormatsService();
     this.autocomplete = new AutocompleteService(initializerContext);
-    this.storage = createStorage({ engine: window.localStorage, prefix: 'opensearch_dashboards.' });
+    this.storage = createStorage({ engine: window.localStorage, prefix: 'opensearchDashboards.' });
+    this.sessionStorage = createStorage({
+      engine: window.sessionStorage,
+      prefix: 'opensearchDashboards.',
+    });
   }
 
   public setup(
@@ -134,9 +140,16 @@ export class DataPublicPlugin
     expressions.registerFunction(opensearchaggs);
     expressions.registerFunction(indexPatternLoad);
 
+    const searchService = this.searchService.setup(core, {
+      usageCollection,
+      expressions,
+    });
+
     const queryService = this.queryService.setup({
       uiSettings: core.uiSettings,
       storage: this.storage,
+      sessionStorage: this.sessionStorage,
+      defaultSearchInterceptor: searchService.getDefaultSearchInterceptor(),
     });
 
     uiActions.registerAction(
@@ -157,16 +170,10 @@ export class DataPublicPlugin
       }))
     );
 
-    const searchService = this.searchService.setup(core, {
-      usageCollection,
-      expressions,
-    });
-
-    const uiService = this.uiService.setup(core, {});
-
-    const ac = this.autocomplete.setup(core);
-    ac.addQuerySuggestionProvider('SQL', getSQLSuggestions);
-    ac.addQuerySuggestionProvider('kuery', getDQLSuggestions);
+    const autoComplete = this.autocomplete.setup(core);
+    autoComplete.addQuerySuggestionProvider('SQL', getSQLSuggestions);
+    autoComplete.addQuerySuggestionProvider('kuery', getDQLSuggestions);
+    autoComplete.addQuerySuggestionProvider('PPL', getPPLSuggestions);
 
     return {
       // TODO: MQL
@@ -176,7 +183,8 @@ export class DataPublicPlugin
       query: queryService,
       __enhance: (enhancements: DataPublicPluginEnhancements) => {
         if (enhancements.search) searchService.__enhance(enhancements.search);
-        if (enhancements.ui) uiService.__enhance(enhancements.ui);
+        if (enhancements.editor)
+          queryService.queryString.getLanguageService().__enhance(enhancements.editor);
       },
     };
   }

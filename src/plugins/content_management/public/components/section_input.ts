@@ -31,9 +31,11 @@ export const createCardInput = (
     id: section.id,
     title: section.title ?? '',
     hidePanelTitles: true,
+    hidePanelActions: true,
     viewMode: ViewMode.VIEW,
     columns: section.columns,
     wrap: section.wrap,
+    grid: section.grid,
     panels,
     ...section.input,
   };
@@ -44,11 +46,14 @@ export const createCardInput = (
         type: CARD_EMBEDDABLE,
         explicitInput: {
           id: content.id,
-          title: content.title,
+          title: content?.title,
           description: content.description,
+          toolTipContent: content?.toolTipContent,
+          getTitle: content?.getTitle,
           onClick: content.onClick,
           getIcon: content?.getIcon,
           getFooter: content?.getFooter,
+          cardProps: content.cardProps,
         },
       };
     }
@@ -174,6 +179,8 @@ export const createDashboardInput = async (
       if (content.kind === 'custom') {
         panelConfig.type = CUSTOM_CONTENT_EMBEDDABLE;
         panelConfig.explicitInput.render = content.render;
+        // Currently, for custom content, there is no case that requires panel actions, so hide it
+        panelConfig.explicitInput.hidePanelActions = true;
       }
 
       panels[content.id] = panelConfig;

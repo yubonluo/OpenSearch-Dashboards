@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import {
   WorkspacePermissionSettingPanel,
   WorkspacePermissionSettingPanelProps,
@@ -76,10 +76,10 @@ describe('WorkspacePermissionSettingInput', () => {
   it('should render consistent user and group permissions', () => {
     const { renderResult } = setup();
 
-    expect(renderResult.getByText('foo')).toBeInTheDocument();
+    expect(renderResult.getByDisplayValue('foo')).toBeInTheDocument();
     expect(renderResult.getByText('Read')).toBeInTheDocument();
 
-    expect(renderResult.getByText('bar')).toBeInTheDocument();
+    expect(renderResult.getByDisplayValue('bar')).toBeInTheDocument();
     expect(renderResult.getByText('Read & Write')).toBeInTheDocument();
   });
 
@@ -87,10 +87,7 @@ describe('WorkspacePermissionSettingInput', () => {
     const { renderResult, onChangeMock } = setup();
 
     expect(onChangeMock).not.toHaveBeenCalled();
-    const permissionToggleListButton = within(
-      renderResult.getAllByTestId('workspace-permissionModeOptions')[0]
-    ).getByTestId('comboBoxToggleListButton');
-    fireEvent.click(permissionToggleListButton);
+    fireEvent.click(renderResult.getAllByTestId('workspace-permissionModeOptions')[0]);
     fireEvent.click(renderResult.getAllByText('Read & Write')[1]);
     expect(onChangeMock).toHaveBeenCalledWith([
       {
@@ -111,10 +108,8 @@ describe('WorkspacePermissionSettingInput', () => {
     const { renderResult, onChangeMock } = setup();
 
     expect(onChangeMock).not.toHaveBeenCalled();
-    const permissionToggleListButton = within(
-      renderResult.getAllByTestId('workspace-permissionModeOptions')[1]
-    ).getByTestId('comboBoxToggleListButton');
-    fireEvent.click(permissionToggleListButton);
+
+    fireEvent.click(renderResult.getAllByTestId('workspace-permissionModeOptions')[1]);
     fireEvent.click(renderResult.getByText('Owner'));
     expect(onChangeMock).toHaveBeenCalledWith([
       {
@@ -207,11 +202,12 @@ describe('WorkspacePermissionSettingInput', () => {
     ]);
   });
 
-  it('should call onGroupOrUserIdChange without user id after clear button clicked', () => {
+  it('should call onGroupOrUserIdChange after user value changed', () => {
     const { renderResult, onChangeMock } = setup();
 
     expect(onChangeMock).not.toHaveBeenCalled();
-    fireEvent.click(renderResult.getAllByTestId('comboBoxClearButton')[0]);
+    const inputElement = renderResult.getByDisplayValue('foo');
+    fireEvent.change(inputElement, { target: { value: 'fooo' } });
     expect(onChangeMock).toHaveBeenCalled();
   });
 
@@ -234,12 +230,8 @@ describe('WorkspacePermissionSettingInput', () => {
       disabledUserOrGroupInputIds: [0, 1],
     });
 
-    expect(renderResult.getByText('user-1')?.closest('div[role="combobox"]')).toHaveClass(
-      'euiComboBox-isDisabled'
-    );
-    expect(renderResult.getByText('user-group-1')?.closest('div[role="combobox"]')).toHaveClass(
-      'euiComboBox-isDisabled'
-    );
+    expect(renderResult.getByDisplayValue('user-1')).toBeDisabled();
+    expect(renderResult.getByDisplayValue('user-group-1')).toBeDisabled();
   });
 
   it('should render consistent errors', () => {

@@ -12,10 +12,12 @@ import {
   NotificationsStart,
   DocLinksStart,
   HttpSetup,
+  WorkspacesStart,
 } from 'src/core/public';
 import { ManagementAppMountParams } from 'src/plugins/management/public';
 import { i18n } from '@osd/i18n';
 import { EuiComboBoxOptionOption } from '@elastic/eui';
+import { NavigationPublicPluginStart } from 'src/plugins/navigation/public';
 import { AuthType } from '../../data_source/common/data_sources';
 import { SigV4ServiceName } from '../../data_source/common/data_sources';
 import { OpenSearchDashboardsReactContextValue } from '../../opensearch_dashboards_react/public';
@@ -33,15 +35,26 @@ export interface DataSourceManagementContext {
   overlays: OverlayStart;
   http: HttpSetup;
   docLinks: DocLinksStart;
+  navigation: NavigationPublicPluginStart;
   setBreadcrumbs: ManagementAppMountParams['setBreadcrumbs'];
   authenticationMethodRegistry: AuthenticationMethodRegistry;
+  workspaces: WorkspacesStart;
+}
+
+export enum DataSourceConnectionType {
+  OpenSearchConnection,
+  DirectQueryConnection,
 }
 
 export interface DataSourceTableItem {
   id: string;
+  type?: string;
   title: string;
-  description: string;
-  sort: string;
+  parentId?: string;
+  connectionType?: DataSourceConnectionType;
+  description?: string;
+  sort?: string;
+  relatedConnections?: DataSourceTableItem[];
 }
 
 export interface ToastMessageItem {
@@ -176,16 +189,4 @@ export interface PermissionsConfigurationProps {
   setSelectedRoles: React.Dispatch<React.SetStateAction<Role[]>>;
   layout: 'horizontal' | 'vertical';
   hasSecurityAccess: boolean;
-}
-
-export interface DirectQueryDatasourceDetails {
-  allowedRoles: string[];
-  name: string;
-  connector: DirectQueryDatasourceType;
-  description: string;
-  properties: S3GlueProperties | PrometheusProperties;
-  status: DirectQueryDatasourceStatus;
-}
-export interface PrometheusProperties {
-  'prometheus.uri': string;
 }
