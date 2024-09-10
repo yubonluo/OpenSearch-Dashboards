@@ -46,6 +46,7 @@ import {
   EuiCallOut,
   EuiBasicTableColumn,
   EuiText,
+  EuiPageProps,
 } from '@elastic/eui';
 import { HttpFetchError, ToastsStart } from 'opensearch-dashboards/public';
 import { toMountPoint } from '../util';
@@ -81,6 +82,9 @@ export interface TableListViewProps {
    * If the table is not empty, this component renders its own h1 element using the same id.
    */
   headingId?: string;
+  restrictWidth?: boolean;
+  paddingSize?: EuiPageProps['paddingSize'];
+  showUpdatedUx?: boolean;
 }
 
 export interface TableListViewState {
@@ -441,6 +445,7 @@ class TableListView extends React.Component<TableListViewProps, TableListViewSta
         type: 'icon',
         enabled: ({ error }: { error: string }) => !error,
         onClick: this.props.editItem,
+        'data-test-subj': 'edit-dashboard-action',
       },
     ];
 
@@ -522,15 +527,17 @@ class TableListView extends React.Component<TableListViewProps, TableListViewSta
       <div>
         {this.state.showDeleteModal && this.renderConfirmDeleteModal()}
 
-        <EuiFlexGroup justifyContent="spaceBetween" alignItems="flexEnd" data-test-subj="top-nav">
-          <EuiFlexItem grow={false}>
-            <EuiText size="s">
-              <h1 id={this.props.headingId}>{this.props.tableListTitle}</h1>
-            </EuiText>
-          </EuiFlexItem>
+        {!this.props.showUpdatedUx && (
+          <EuiFlexGroup justifyContent="spaceBetween" alignItems="flexEnd" data-test-subj="top-nav">
+            <EuiFlexItem grow={false}>
+              <EuiText size="s">
+                <h1 id={this.props.headingId}>{this.props.tableListTitle}</h1>
+              </EuiText>
+            </EuiFlexItem>
 
-          {this.props.createButton || defaultCreateButton}
-        </EuiFlexGroup>
+            {this.props.createButton || defaultCreateButton}
+          </EuiFlexGroup>
+        )}
 
         <EuiSpacer size="m" />
 
@@ -559,7 +566,8 @@ class TableListView extends React.Component<TableListViewProps, TableListViewSta
       <EuiPage
         data-test-subj={this.props.entityName + 'LandingPage'}
         className="itemListing__page"
-        restrictWidth
+        restrictWidth={this.props.restrictWidth}
+        paddingSize={this.props.paddingSize}
       >
         <EuiPageBody
           component="main"

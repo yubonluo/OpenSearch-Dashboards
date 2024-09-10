@@ -11,6 +11,8 @@ import {
   ALL_USE_CASE_ID,
   CoreStart,
   ChromeBreadcrumb,
+  ApplicationStart,
+  HttpSetup,
 } from '../../../core/public';
 import {
   App,
@@ -23,6 +25,7 @@ import {
 } from '../../../core/public';
 import { DEFAULT_SELECTED_FEATURES_IDS, WORKSPACE_DETAIL_APP_ID } from '../common/constants';
 import { WorkspaceUseCase } from './types';
+import { formatUrlWithWorkspaceId } from '../../../core/public/utils';
 import { SigV4ServiceName } from '../../../plugins/data_source/common/data_sources';
 
 export const USE_CASE_PREFIX = 'use-case-';
@@ -45,7 +48,7 @@ export const isFeatureIdInsideUseCase = (
   useCases: WorkspaceUseCase[]
 ) => {
   const availableFeatures = useCases.find(({ id }) => id === useCaseId)?.features ?? [];
-  return availableFeatures.includes(featureId);
+  return availableFeatures.some((feature) => feature.id === featureId);
 };
 
 export const isNavGroupInFeatureConfigs = (navGroupId: string, featureConfigs: string[]) =>
@@ -203,7 +206,7 @@ export const getDataSourcesList = (client: SavedObjectsStart['client'], workspac
   return client
     .find({
       type: 'data-source',
-      fields: ['id', 'title', 'auth'],
+      fields: ['id', 'title', 'auth', 'description', 'dataSourceEngineType'],
       perPage: 10000,
       workspaces,
     })
@@ -214,10 +217,14 @@ export const getDataSourcesList = (client: SavedObjectsStart['client'], workspac
           const id = source.id;
           const title = source.get('title');
           const auth = source.get('auth');
+          const description = source.get('description');
+          const dataSourceEngineType = source.get('dataSourceEngineType');
           return {
             id,
             title,
             auth,
+            description,
+            dataSourceEngineType,
           };
         });
       } else {
@@ -248,8 +255,8 @@ export const convertNavGroupToWorkspaceUseCase = ({
   id,
   title,
   description,
-  features: navLinks.map((item) => item.id),
-  systematic: type === NavGroupType.SYSTEM,
+  features: navLinks.map((item) => ({ id: item.id, title: item.title })),
+  systematic: type === NavGroupType.SYSTEM || id === ALL_USE_CASE_ID,
   order,
 });
 
@@ -271,7 +278,11 @@ export const isEqualWorkspaceUseCase = (a: WorkspaceUseCase, b: WorkspaceUseCase
   }
   if (
     a.features.length !== b.features.length ||
-    a.features.some((featureId) => !b.features.includes(featureId))
+    a.features.some((aFeature) =>
+      b.features.some(
+        (bFeature) => aFeature.id !== bFeature.id || aFeature.title !== bFeature.title
+      )
+    )
   ) {
     return false;
   }
@@ -362,3 +373,21 @@ export function prependWorkspaceToBreadcrumbs(
     });
   }
 }
+
+export const getUseCaseUrl = (
+  useCase: WorkspaceUseCase | undefined,
+  workspace: WorkspaceObject,
+  application: ApplicationStart,
+  http: HttpSetup
+): string => {
+  const appId =
+    (useCase?.id !== ALL_USE_CASE_ID && useCase?.features?.[0].id) || WORKSPACE_DETAIL_APP_ID;
+  const useCaseURL = formatUrlWithWorkspaceId(
+    application.getUrlForApp(appId, {
+      absolute: false,
+    }),
+    workspace.id,
+    http.basePath
+  );
+  return useCaseURL;
+};
