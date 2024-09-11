@@ -96,61 +96,41 @@ export async function importSavedObjectsFromStream({
     }
   }
 
-  // If target workspace and assigned data source is exists, it will check whether
-  // the assigned data sources in the target workspace include the data sources of the imported saved objects.
+  // If target workspace is exists, it will check whether the assigned data sources in the target workspace
+  // include the data sources of the imported saved objects.
   if (workspaces && workspaces.length > 0) {
-    const assignedDataSources = await savedObjectsClient
+    const assignedDataSourcesInTargetWorkspace = await savedObjectsClient
       .find({
         type: 'data-source',
-        fields: ['id', 'title'],
+        fields: ['id'],
         perPage: 10000,
         workspaces,
       })
       .then((response) => {
-        const objects = response?.saved_objects;
-        if (objects) {
-          return objects.map((source) => {
-            const id = source.id;
-            return {
-              id,
-            };
-          });
-        } else {
-          return [];
-        }
+        return response?.saved_objects?.map((source) => source.id) ?? [];
       });
-    if (assignedDataSources) {
-      const errors: SavedObjectsImportError[] = [];
-      const duplicateObjects: typeof collectSavedObjectsResult.collectedObjects = [];
-      for (const object of collectSavedObjectsResult.collectedObjects) {
-        try {
-          const referenceDSId = await findDataSourceForObject(object, savedObjectsClient);
-          if (referenceDSId && !assignedDataSources.some((ds) => ds.id === referenceDSId)) {
-            const error: SavedObjectsImportError = {
-              type: object.type,
-              id: object.id,
-              error: {
-                type: 'missing_references',
-                references: [{ type: 'data-source', id: referenceDSId }],
-              },
-              meta: { title: object.attributes?.title },
-            };
-            errors.push(error);
-          } else {
-            duplicateObjects.push(object);
-          }
-        } catch (err) {
-          const error: SavedObjectsImportError = {
+    for (const object of collectSavedObjectsResult.collectedObjects) {
+      try {
+        const referenceDSId = await findDataSourceForObject(object, savedObjectsClient);
+        if (referenceDSId && !assignedDataSourcesInTargetWorkspace.includes(referenceDSId)) {
+          collectSavedObjectsResult.errors.push({
             type: object.type,
             id: object.id,
-            error: { type: 'unsupported_type' },
+            error: {
+              type: 'missing_target_workspace_assigned_data_source',
+              message: `The object hasn’t be copied to the selected workspace. The data source (${referenceDSId}) is not available in the selected workspace.`,
+            },
             meta: { title: object.attributes?.title },
-          };
-          errors.push(error);
+          });
         }
+      } catch (err) {
+        collectSavedObjectsResult.errors.push({
+          type: object.type,
+          id: object.id,
+          error: { type: 'unknown', message: err, statusCode: 500 },
+          meta: { title: object.attributes?.title },
+        });
       }
-      errorAccumulator = [...errorAccumulator, ...errors];
-      collectSavedObjectsResult.collectedObjects = duplicateObjects;
     }
   }
 

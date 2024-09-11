@@ -12,7 +12,6 @@ import {
 } from '../../../../core/server';
 import { WORKSPACES_API_BASE_URL } from '.';
 import { IWorkspaceClientImpl } from '../types';
-import { getDataSourcesList } from '../utils';
 
 export const registerDuplicateRoute = (
   router: IRouter,

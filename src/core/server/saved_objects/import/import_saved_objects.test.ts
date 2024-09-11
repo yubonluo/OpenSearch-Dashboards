@@ -105,8 +105,7 @@ describe('#importSavedObjectsFromStream', () => {
     createNewCopies: boolean = false,
     dataSourceId: string | undefined = undefined,
     dataSourceEnabled: boolean | undefined = false,
-    workspaces: SavedObjectsBaseOptions['workspaces'] = undefined,
-    assignedDataSources: string[] = []
+    workspaces: SavedObjectsBaseOptions['workspaces'] = undefined
   ): SavedObjectsImportOptions => {
     readStream = new Readable();
     savedObjectsClient = savedObjectsClientMock.create();
@@ -128,7 +127,6 @@ describe('#importSavedObjectsFromStream', () => {
       createNewCopies,
       dataSourceId,
       workspaces,
-      assignedDataSources,
     };
   };
   const createObject = (
@@ -405,7 +403,7 @@ describe('#importSavedObjectsFromStream', () => {
     });
 
     test('validates workspace with assigned data source', async () => {
-      const options = setupOptions(false, undefined, false, ['workspace-1'], ['dataSource-1']);
+      const options = setupOptions(false, undefined, false, ['workspace-1']);
       const collectedObjects = [createObject()];
       getMockFn(collectSavedObjects).mockResolvedValue({
         errors: [],
@@ -419,7 +417,7 @@ describe('#importSavedObjectsFromStream', () => {
     });
 
     test('validates workspace with unassigned data source', async () => {
-      const options = setupOptions(false, undefined, false, ['workspace-1'], ['dataSource-1']);
+      const options = setupOptions(false, undefined, false, ['workspace-1']);
       const collectedObjects = [createObject()];
       getMockFn(collectSavedObjects).mockResolvedValue({
         errors: [],
@@ -433,7 +431,7 @@ describe('#importSavedObjectsFromStream', () => {
     });
 
     test('validates workspace with catch error', async () => {
-      const options = setupOptions(false, undefined, false, ['workspace-1'], ['dataSource-1']);
+      const options = setupOptions(false, undefined, false, ['workspace-1']);
       const collectedObjects = [createObject()];
       getMockFn(collectSavedObjects).mockResolvedValue({
         errors: [],
