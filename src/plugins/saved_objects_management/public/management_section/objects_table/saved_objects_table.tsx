@@ -29,7 +29,7 @@
  */
 
 import React, { Component } from 'react';
-import _, { debounce } from 'lodash';
+import { debounce } from 'lodash';
 // @ts-expect-error
 import { saveAs } from '@elastic/filesaver';
 import {
