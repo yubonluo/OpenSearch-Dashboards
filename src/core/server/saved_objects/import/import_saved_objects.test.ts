@@ -162,6 +162,20 @@ describe('#importSavedObjectsFromStream', () => {
       error: { type: 'conflict' },
     };
   };
+  const findObjectsMock = {
+    saved_objects: [
+      {
+        id: 'data-source-1',
+        score: 0,
+        type: 'data-source',
+        attributes: {},
+        references: [],
+      },
+    ],
+    total: 1,
+    page: 1,
+    per_page: 1,
+  };
 
   /**
    * These tests use minimal mocks which don't look realistic, but are sufficient to exercise the code paths correctly. For example, for an
@@ -403,35 +417,50 @@ describe('#importSavedObjectsFromStream', () => {
     });
 
     test('validates workspace with assigned data source', async () => {
-      const options = setupOptions(false, undefined, false, ['workspace-1']);
+      const options = setupOptions(false, undefined, true, ['workspace-1']);
       const collectedObjects = [createObject()];
       getMockFn(collectSavedObjects).mockResolvedValue({
         errors: [],
         collectedObjects,
         importIdMap: new Map(),
       });
-      getMockFn(findDataSourceForObject).mockResolvedValue('dataSource-1');
+      getMockFn(findDataSourceForObject).mockResolvedValue('data-source-1');
+      const clientMock = savedObjectsClientMock.create();
+      clientMock.find.mockResolvedValueOnce(findObjectsMock);
 
-      const result = await importSavedObjectsFromStream(options);
+      const result = await importSavedObjectsFromStream({
+        ...options,
+        savedObjectsClient: clientMock,
+      });
       expect(result).toEqual({ success: true, successCount: 0 });
     });
 
     test('validates workspace with unassigned data source', async () => {
-      const options = setupOptions(false, undefined, false, ['workspace-1']);
+      const options = setupOptions(false, undefined, true, ['workspace-1']);
       const collectedObjects = [createObject()];
       getMockFn(collectSavedObjects).mockResolvedValue({
         errors: [],
         collectedObjects,
         importIdMap: new Map(),
       });
-      getMockFn(findDataSourceForObject).mockResolvedValue('dataSource-2');
+      getMockFn(findDataSourceForObject).mockResolvedValue('data-source-2');
+      const clientMock = savedObjectsClientMock.create();
+      clientMock.find.mockResolvedValueOnce(findObjectsMock);
 
-      const result = await importSavedObjectsFromStream(options);
+      const result = await importSavedObjectsFromStream({
+        ...options,
+        savedObjectsClient: clientMock,
+      });
       expect(result).toEqual({ success: false, successCount: 0, errors: [expect.any(Object)] });
+      expect(result.errors?.[0].error).toEqual({
+        message:
+          'The object hasn’t be copied to the selected workspace. The data source (data-source-2) is not available in the selected workspace.',
+        type: 'missing_target_workspace_assigned_data_source',
+      });
     });
 
     test('validates workspace with catch error', async () => {
-      const options = setupOptions(false, undefined, false, ['workspace-1']);
+      const options = setupOptions(false, undefined, true, ['workspace-1']);
       const collectedObjects = [createObject()];
       getMockFn(collectSavedObjects).mockResolvedValue({
         errors: [],
@@ -439,9 +468,19 @@ describe('#importSavedObjectsFromStream', () => {
         importIdMap: new Map(),
       });
       getMockFn(findDataSourceForObject).mockRejectedValue(null);
+      const clientMock = savedObjectsClientMock.create();
+      clientMock.find.mockResolvedValueOnce(findObjectsMock);
 
-      const result = await importSavedObjectsFromStream(options);
+      const result = await importSavedObjectsFromStream({
+        ...options,
+        savedObjectsClient: clientMock,
+      });
       expect(result).toEqual({ success: false, successCount: 0, errors: [expect.any(Object)] });
+      expect(result.errors?.[0].error).toEqual({
+        message: null,
+        statusCode: 500,
+        type: 'unknown',
+      });
     });
 
     describe('handles a mix of successes and errors and injects metadata', () => {
