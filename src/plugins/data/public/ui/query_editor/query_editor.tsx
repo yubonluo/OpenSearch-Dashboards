@@ -304,9 +304,13 @@ export const QueryEditorUI: React.FC<Props> = (props) => {
 
     const language = getEffectiveLanguageForAutoComplete(queryRef.current.language, currentAppId);
 
+    // Use interpolated query for autocomplete so the parser understands variable context
+    const rawQuery = inputRef.current?.getValue() ?? '';
+    const interpolatedQuery = services.data.query.queryString.interpolateVariables?.(rawQuery) ?? rawQuery;
+
     const suggestions = await services.data.autocomplete.getQuerySuggestions({
-      query: inputRef.current?.getValue() ?? '',
-      selectionStart: model.getOffsetAt(position), // not needed, position handles same thing. remove
+      query: interpolatedQuery,
+      selectionStart: model.getOffsetAt(position),
       selectionEnd: model.getOffsetAt(position),
       language,
       indexPattern,
@@ -324,10 +328,38 @@ export const QueryEditorUI: React.FC<Props> = (props) => {
       wordUntil.endColumn
     );
 
+    // Check if user is typing a variable reference ($)
+    const textUntilPosition = model.getValueInRange({
+      startLineNumber: position.lineNumber,
+      startColumn: 1,
+      endLineNumber: position.lineNumber,
+      endColumn: position.column,
+    });
+    const variableMatch = textUntilPosition.match(/\$(\w*)$/);
+    let variableSuggestions: monaco.languages.CompletionItem[] = [];
+    if (variableMatch) {
+      const variables = services.data.query.queryString.getVariables?.() ?? [];
+      const varRange = new monaco.Range(
+        position.lineNumber,
+        position.column - variableMatch[0].length,
+        position.lineNumber,
+        position.column
+      );
+      variableSuggestions = variables.map((v: { name: string; label?: string }) => ({
+        label: `$${v.name}`,
+        kind: monaco.languages.CompletionItemKind.Variable,
+        insertText: `\${${v.name}}`,
+        range: varRange,
+        detail: v.label || `Dashboard variable`,
+        sortText: `0_${v.name}`,
+      }));
+    }
+
     return {
-      suggestions:
-        suggestions && suggestions.length > 0
-          ? (suggestions.filter((s) => 'detail' in s) as MonacoCompatibleQuerySuggestion[]) // Cast the filtered array
+      suggestions: [
+        ...variableSuggestions,
+        ...(suggestions && suggestions.length > 0
+          ? (suggestions.filter((s) => 'detail' in s) as MonacoCompatibleQuerySuggestion[])
               .map(
                 (
                   s: MonacoCompatibleQuerySuggestion,
@@ -349,7 +381,8 @@ export const QueryEditorUI: React.FC<Props> = (props) => {
                   };
                 }
               )
-          : [],
+          : []),
+      ],
       incomplete: false,
     };
   };

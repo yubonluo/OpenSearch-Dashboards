@@ -129,6 +129,7 @@ import {
 import { DashboardProvider, DashboardServices } from './types';
 import { bootstrap } from './ui_triggers';
 import { VariablesBar } from './application/components/dashboard_variables';
+import { setPPLVariableInterpolator } from '@osd/monaco';
 
 declare module '../../share/public' {
   export interface UrlGeneratorStateMapping {
@@ -648,6 +649,12 @@ export class DashboardPlugin
       chrome: core.chrome,
       overlays: core.overlays,
     });
+
+    // Register variable interpolator for PPL editor validation
+    // This enables the Monaco PPL parser to understand $variable references
+    setPPLVariableInterpolator((query: string) =>
+      plugins.data.query.queryString.interpolateVariables(query)
+    );
     const dashboardContainerFactory = plugins.embeddable.getEmbeddableFactory(
       DASHBOARD_CONTAINER_TYPE
     )! as DashboardContainerFactory;

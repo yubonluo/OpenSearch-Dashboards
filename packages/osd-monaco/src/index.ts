@@ -37,6 +37,7 @@ export {
   registerPPLValidationProvider,
   resolvePPLValidationResult,
   setPPLValidationContext,
+  setPPLVariableInterpolator,
 } from './ppl';
 export type {
   PPLValidationContext,

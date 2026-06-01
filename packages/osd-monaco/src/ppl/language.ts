@@ -17,6 +17,17 @@ const OWNER = 'PPL_WORKER';
 // PPL worker proxy service for worker-based syntax highlighting
 const pplWorkerProxyService = new PPLWorkerProxyService();
 
+// Pluggable variable interpolator — set by dashboard plugin to replace $var with current values
+let pplVariableInterpolator: ((query: string) => string) | undefined;
+
+/**
+ * Register a function that replaces $variable references with their current values.
+ * Used by the dashboard plugin to provide variable context for PPL validation.
+ */
+export const setPPLVariableInterpolator = (fn: (query: string) => string) => {
+  pplVariableInterpolator = fn;
+};
+
 // PPL analyzer for synchronous tokenization (lazy initialization)
 let pplAnalyzer: ReturnType<typeof getPPLLanguageAnalyzer> | undefined;
 
@@ -127,12 +138,19 @@ const processSyntaxHighlighting = async (model: monaco.editor.IModel) => {
   try {
     const content = model.getValue();
 
+    // Replace dashboard variable references ($var / ${var}) with their current
+    // values before validation so the ANTLR parser can understand the query context.
+    // If no interpolator is registered, fall back to equal-length underscore padding.
+    const validationContent = pplVariableInterpolator
+      ? pplVariableInterpolator(content)
+      : content.replace(/\$\{(\w+)\}|\$(\w+)/g, (match: string) => '_'.repeat(match.length));
+
     // Ensure worker is set up before validation - always call setup as it has internal check
     pplWorkerProxyService.setup();
 
     const validationResult = (await resolvePPLValidationResult(
       model,
-      content,
+      validationContent,
       async (query) => (await pplWorkerProxyService.validate(query)) as PPLValidationResult
     )) as PPLValidationResult;
 

@@ -99,7 +99,7 @@ export const DefaultInput: React.FC<DefaultInputProps> = ({
           tabCompletion: 'on', // Enable Tab for suggestion acceptance
         }}
         suggestionProvider={{
-          triggerCharacters: [' '],
+          triggerCharacters: [' ', '$'],
           provideCompletionItems: async (model, position, context, token) => {
             return provideCompletionItems(model, position, context, token);
           },

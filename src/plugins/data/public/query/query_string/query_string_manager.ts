@@ -391,6 +391,32 @@ export class QueryStringManager {
     }
     return undefined;
   }
+
+  // Variable context for query editor completions and validation (set by DashboardContainer)
+  private variableContext: Array<{ name: string; label?: string; current?: string[] }> = [];
+
+  public setVariables(variables: Array<{ name: string; label?: string; current?: string[] }>) {
+    this.variableContext = variables;
+  }
+
+  public getVariables(): Array<{ name: string; label?: string; current?: string[] }> {
+    return this.variableContext;
+  }
+
+  /**
+   * Replace $var / ${var} in a query with their current values for parser consumption.
+   * Falls back to a safe placeholder ('_') when no current value is available.
+   */
+  public interpolateVariables(query: string): string {
+    if (!query || this.variableContext.length === 0) return query;
+    return query.replace(/\$\{(\w+)\}|\$(\w+)/g, (match, braced, simple) => {
+      const varName = braced || simple;
+      const variable = this.variableContext.find((v) => v.name === varName);
+      if (!variable) return match; // not a known variable, leave as-is
+      const value = variable.current?.[0];
+      return value ?? '_';
+    });
+  }
 }
 
 const showWarning = (

@@ -164,7 +164,7 @@ export const SingleLineInput: React.FC<SingleLineInputProps> = ({
               // Using Monaco's built-in status bar with default behavior
             }}
             suggestionProvider={{
-              triggerCharacters: [' '],
+              triggerCharacters: [' ', '$'],
               // Make sure all parameters are passed to the provideCompletionItems function
               provideCompletionItems: async (model, position, context, token) => {
                 return provideCompletionItems(model, position, context, token);

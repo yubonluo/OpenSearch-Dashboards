@@ -185,6 +185,10 @@ export class DashboardContainer extends Container<InheritedChildInput, Dashboard
         if (!isEqual(currentNormalized, newNormalized)) {
           this.updateInput({ variables });
         }
+        // Sync variable names to queryString for editor autocomplete
+        this.options.data?.query.queryString.setVariables?.(
+          (variables ?? []).map((v) => ({ name: v.name, label: v.label, current: v.current }))
+        );
       })
     );
 
