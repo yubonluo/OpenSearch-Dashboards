@@ -186,26 +186,124 @@ export const getFinalSavedObjects = ({
   workspaceId,
   dataSourceId,
   dataSourceTitle,
+  isEngineSupported = true,
 }: {
   dataset: SampleDatasetSchema;
   workspaceId?: string;
   dataSourceId?: string;
   dataSourceTitle?: string;
+  // When false (e.g. AnalyticEngine), only the index-pattern saved objects are
+  // installed (DSL visualizations/dashboards are skipped) and geo fields are
+  // stripped from the index-pattern field list.
+  isEngineSupported?: boolean;
 }) => {
-  if (workspaceId && dataSourceId) {
-    return overwriteSavedObjectsWithWorkspaceId(
-      dataset.getDataSourceIntegratedSavedObjects(dataSourceId, dataSourceTitle),
-      workspaceId
-    );
-  }
-  if (workspaceId) {
-    return dataset.getWorkspaceIntegratedSavedObjects(workspaceId);
-  }
-  if (dataSourceId) {
-    return dataset.getDataSourceIntegratedSavedObjects(dataSourceId, dataSourceTitle);
+  const baseSavedObjects = (() => {
+    if (workspaceId && dataSourceId) {
+      return overwriteSavedObjectsWithWorkspaceId(
+        dataset.getDataSourceIntegratedSavedObjects(dataSourceId, dataSourceTitle),
+        workspaceId
+      );
+    }
+    if (workspaceId) {
+      return dataset.getWorkspaceIntegratedSavedObjects(workspaceId);
+    }
+    if (dataSourceId) {
+      return dataset.getDataSourceIntegratedSavedObjects(dataSourceId, dataSourceTitle);
+    }
+
+    return dataset.savedObjects;
+  })();
+
+  if (isEngineSupported) {
+    return baseSavedObjects;
   }
 
-  return dataset.savedObjects;
+  const fieldsToSkip = dataset.dataIndices.reduce<string[]>(
+    (acc, dataIndex) => acc.concat(dataIndex.fieldsToSkipForUnsupportedEngine ?? []),
+    []
+  );
+
+  // Only datasets that explicitly declare fields to skip (e.g. logs declares
+  // `geo`) opt into unsupported-engine handling. Other datasets allowed on the
+  // engine (e.g. otel, whose visualizations may be PPL-based) are left intact.
+  if (fieldsToSkip.length === 0) {
+    return baseSavedObjects;
+  }
+
+  return filterSavedObjectsForUnsupportedEngine(baseSavedObjects, fieldsToSkip);
+};
+
+// Returns true when a field name matches one of the top-level fields to skip,
+// either exactly (`geo`) or as a nested child (`geo.coordinates`, `geo.src`...).
+const isSkippedField = (fieldName: unknown, fieldsToSkip: string[]): boolean => {
+  if (typeof fieldName !== 'string') {
+    return false;
+  }
+  return fieldsToSkip.some((skip) => fieldName === skip || fieldName.startsWith(`${skip}.`));
+};
+
+// Removes the skipped fields (e.g. geo.*) from an index-pattern's stored field
+// list. The index-pattern keeps its known fields as a JSON string in
+// `attributes.fields`. A shallow clone is taken so the shared dataset spec is
+// never mutated.
+const stripFieldsFromIndexPattern = (
+  savedObject: SavedObject,
+  fieldsToSkip: string[]
+): SavedObject => {
+  // @ts-expect-error TS2571 attributes is typed as unknown
+  const fieldsString = savedObject.attributes?.fields;
+  if (typeof fieldsString !== 'string' || fieldsToSkip.length === 0) {
+    return savedObject;
+  }
+
+  let parsedFields: any;
+  try {
+    parsedFields = JSON.parse(fieldsString);
+  } catch (e) {
+    // Leave the field list untouched if it cannot be parsed.
+    return savedObject;
+  }
+
+  if (!Array.isArray(parsedFields)) {
+    return savedObject;
+  }
+
+  const filteredFields = parsedFields.filter((field) => !isSkippedField(field?.name, fieldsToSkip));
+
+  return {
+    ...savedObject,
+    attributes: {
+      // @ts-expect-error TS2698 attributes is typed as unknown
+      ...savedObject.attributes,
+      fields: JSON.stringify(filteredFields),
+    },
+  };
+};
+
+// For unsupported engine types, keep only the index-pattern saved objects
+// (skip DSL visualizations and dashboards) and strip skipped fields from the
+// retained index patterns.
+export const filterSavedObjectsForUnsupportedEngine = (
+  savedObjects: SavedObject[],
+  fieldsToSkip: string[]
+): SavedObject[] => {
+  return savedObjects
+    .filter((savedObject) => savedObject.type === 'index-pattern')
+    .map((savedObject) => stripFieldsFromIndexPattern(savedObject, fieldsToSkip));
+};
+
+// Returns a shallow copy of `fields` (an OpenSearch mappings `properties`
+// object) with the given top-level field names removed. Used to drop geo
+// mappings when installing against an unsupported engine type.
+export const omitMappingFields = (fields: object, fieldsToSkip: string[]): object => {
+  if (!fieldsToSkip || fieldsToSkip.length === 0) {
+    return fields;
+  }
+  const result: Record<string, any> = { ...(fields as Record<string, any>) };
+  fieldsToSkip.forEach((field) => {
+    delete result[field];
+  });
+  return result;
 };
 
 // Helper function to get a nested field by path

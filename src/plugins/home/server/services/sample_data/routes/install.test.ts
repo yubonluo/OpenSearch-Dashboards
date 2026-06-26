@@ -7,13 +7,14 @@ import { CoreSetup, RequestHandlerContext } from 'src/core/server';
 import { coreMock, httpServerMock } from '../../../../../../core/server/mocks';
 import { SavedObjectsErrorHelpers } from '../../../../../../core/server';
 import { updateWorkspaceState } from '../../../../../../core/server/utils';
-import { flightsSpecProvider } from '../data_sets';
+import { flightsSpecProvider, logsSpecProvider } from '../data_sets';
 import { SampleDatasetSchema } from '../lib/sample_dataset_registry_types';
 import { createInstallRoute } from './install';
 
 const flightsSampleDataset = flightsSpecProvider();
+const logsSampleDataset = logsSpecProvider();
 
-const sampleDatasets: SampleDatasetSchema[] = [flightsSampleDataset];
+const sampleDatasets: SampleDatasetSchema[] = [flightsSampleDataset, logsSampleDataset];
 
 describe('sample data install route', () => {
   let mockCoreSetup: MockedKeys<CoreSetup>;
@@ -349,6 +350,88 @@ describe('sample data install route', () => {
     expect(mockResponse.internalError).toBeCalled();
     expect(mockResponse.internalError.mock.calls[0][0]).toMatchObject({
       body: expect.stringContaining('Unknown error'),
+    });
+  });
+
+  it('strips unsupported field mappings (geo, @timestamp) and installs only index-pattern for AnalyticEngine data source', async () => {
+    const mockDataSourceId = 'analytic-engine-ds';
+
+    const mockClient = jest.fn().mockResolvedValue(true);
+
+    const mockSOClient = {
+      bulkCreate: jest.fn().mockResolvedValue({ saved_objects: [] }),
+      // Both the title lookup in install.ts and isAnalyticEngineDataSource read
+      // this same data-source saved object.
+      get: jest.fn().mockResolvedValue({
+        id: mockDataSourceId,
+        attributes: { title: 'AE DS', dataSourceEngineType: 'AnalyticEngine' },
+      }),
+    };
+
+    const mockContext = {
+      dataSource: {
+        opensearch: {
+          legacy: {
+            // @ts-expect-error TS7006 TODO(ts-error): fixme
+            getClient: (id) => {
+              return {
+                callAPI: mockClient,
+              };
+            },
+          },
+        },
+      },
+      core: {
+        savedObjects: { client: mockSOClient },
+      },
+    };
+    const mockBody = { id: 'logs' };
+    const mockQuery = { data_source_id: mockDataSourceId };
+    const mockRequest = httpServerMock.createOpenSearchDashboardsRequest({
+      params: mockBody,
+      query: mockQuery,
+    });
+    const mockResponse = httpServerMock.createResponseFactory();
+
+    createInstallRoute(
+      mockCoreSetup.http.createRouter(),
+      sampleDatasets,
+      // @ts-expect-error TS7005 TODO(ts-error): fixme
+      mockLogger,
+      // @ts-expect-error TS7005 TODO(ts-error): fixme
+      mockUsageTracker
+    );
+
+    const mockRouter = mockCoreSetup.http.createRouter.mock.results[0].value;
+    const handler = mockRouter.post.mock.calls[0][1];
+
+    await handler((mockContext as unknown) as RequestHandlerContext, mockRequest, mockResponse);
+
+    // 1. index created with dynamic:false and unsupported field types removed
+    const createCall = mockClient.mock.calls.find((call) => call[0] === 'indices.create');
+    expect(createCall).toBeDefined();
+    expect(createCall![1].body.mappings.dynamic).toBe(false);
+    expect(createCall![1].body.mappings.properties).not.toHaveProperty('geo');
+    expect(createCall![1].body.mappings.properties).not.toHaveProperty('@timestamp');
+    expect(createCall![1].body.mappings.properties).toHaveProperty('bytes');
+
+    // 2. documents are NOT modified - geo stays in _source (dynamic:false keeps
+    //    it unindexed). The dataset file/ingestion path is untouched.
+    const bulkCall = mockClient.mock.calls.find((call) => call[0] === 'bulk');
+    expect(bulkCall).toBeDefined();
+    const firstDoc = bulkCall![1].body[1];
+    expect(firstDoc).toBeDefined();
+    expect(firstDoc).toHaveProperty('geo');
+
+    // 3. only the index-pattern saved object is installed (DSL viz/dashboards skipped)
+    const bulkCreatedObjects = mockSOClient.bulkCreate.mock.calls[0][0];
+    expect(bulkCreatedObjects.every((so: any) => so.type === 'index-pattern')).toBe(true);
+
+    expect(mockResponse.ok).toBeCalled();
+    expect(mockResponse.ok.mock.calls[0][0]).toMatchObject({
+      body: {
+        opensearchIndicesCreated: { opensearch_dashboards_sample_data_logs: 14074 },
+      },
     });
   });
 });

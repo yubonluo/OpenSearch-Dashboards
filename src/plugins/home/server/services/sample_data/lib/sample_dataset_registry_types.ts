@@ -75,6 +75,15 @@ export interface DataIndexSchema {
   // Optional indexName field, if added wouldn't all flow would use this name
   // `createIndexName` wouldn't be used
   indexName?: string;
+
+  // Mapping field names (e.g. `geo`, `@timestamp`) whose types (geo_point,
+  // alias, ...) are only supported by data source engines capable of
+  // OpenSearch DSL aggregations. When installing against an unsupported engine
+  // type, these fields are removed from the index mappings (the index is
+  // created with `dynamic: false`, so documents that still contain these
+  // fields ingest cleanly without indexing them) and from the index-pattern
+  // field list. The dataset data file itself does not need to change.
+  fieldsToSkipForUnsupportedEngine?: string[];
 }
 
 export interface AppLinkSchema {

@@ -10,6 +10,8 @@ import {
   getNestedField,
   getSavedObjectsWithDataSource,
   setNestedField,
+  omitMappingFields,
+  filterSavedObjectsForUnsupportedEngine,
 } from './util';
 
 describe('getSavedObjectsWithDataSource()', () => {
@@ -346,6 +348,188 @@ describe('getFinalSavedObjects()', () => {
         }),
       ])
     );
+  });
+});
+
+describe('getFinalSavedObjects() - unsupported engine', () => {
+  const buildUnsupportedEngineDataset = () => {
+    const indexPattern: SavedObject<any> = {
+      id: 'logs-index-pattern',
+      type: 'index-pattern',
+      attributes: {
+        title: 'opensearch_dashboards_sample_data_logs',
+        fields: JSON.stringify([
+          { name: 'bytes', type: 'number' },
+          { name: '@timestamp', type: 'date' },
+          { name: 'geo.coordinates', type: 'geo_point' },
+          { name: 'geo.dest', type: 'string' },
+          { name: 'geo.src', type: 'string' },
+          { name: 'geo.srcdest', type: 'string' },
+          { name: 'timestamp', type: 'date' },
+        ]),
+      },
+      references: [],
+    };
+    const visualization: SavedObject<any> = {
+      id: 'logs-vis',
+      type: 'visualization',
+      attributes: { title: 'A DSL visualization' },
+      references: [],
+    };
+    const dashboard: SavedObject<any> = {
+      id: 'logs-dashboard',
+      type: 'dashboard',
+      attributes: { title: 'A dashboard' },
+      references: [],
+    };
+    const savedObjects = [indexPattern, visualization, dashboard];
+    const getSavedObjects = () => JSON.parse(JSON.stringify(savedObjects));
+    return {
+      id: 'logs',
+      name: 'Logs',
+      description: '',
+      previewImagePath: '',
+      darkPreviewImagePath: '',
+      overviewDashboard: '',
+      getDataSourceIntegratedDashboard: () => '',
+      appLinks: [],
+      defaultIndex: '',
+      getDataSourceIntegratedDefaultIndex: () => '',
+      savedObjects: getSavedObjects(),
+      getDataSourceIntegratedSavedObjects: () => getSavedObjects(),
+      getWorkspaceIntegratedSavedObjects: () => getSavedObjects(),
+      dataIndices: [
+        {
+          id: 'logs',
+          dataPath: '',
+          fields: {},
+          timeFields: ['timestamp'],
+          currentTimeMarker: '2018-08-01T00:00:00',
+          preserveDayOfWeekTimeOfDay: true,
+          fieldsToSkipForUnsupportedEngine: ['geo', '@timestamp'],
+        },
+      ],
+    };
+  };
+
+  it('keeps only index-pattern saved objects and strips geo fields when engine is unsupported', () => {
+    const result = getFinalSavedObjects({
+      // @ts-expect-error minimal dataset shape for test
+      dataset: buildUnsupportedEngineDataset(),
+      isEngineSupported: false,
+    });
+
+    // Only the index-pattern survives (DSL viz + dashboard dropped)
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('index-pattern');
+
+    // geo.* and the @timestamp alias are stripped from the index-pattern field list
+    const fields = JSON.parse((result[0].attributes as any).fields);
+    const fieldNames = fields.map((f: any) => f.name);
+    expect(fieldNames).toEqual(['bytes', 'timestamp']);
+  });
+
+  it('returns all saved objects unchanged when engine is supported', () => {
+    const dataset = buildUnsupportedEngineDataset();
+    const result = getFinalSavedObjects({
+      // @ts-expect-error minimal dataset shape for test
+      dataset,
+      isEngineSupported: true,
+    });
+    expect(result).toHaveLength(3);
+    expect(result.map((so) => so.type)).toEqual(['index-pattern', 'visualization', 'dashboard']);
+  });
+
+  it('leaves datasets that did not opt in (no fieldsToSkipForUnsupportedEngine) unchanged on unsupported engines', () => {
+    const dataset = buildUnsupportedEngineDataset();
+    // Remove the opt-in declaration -> dataset should not be filtered.
+    dataset.dataIndices[0].fieldsToSkipForUnsupportedEngine = [];
+    const result = getFinalSavedObjects({
+      // @ts-expect-error minimal dataset shape for test
+      dataset,
+      isEngineSupported: false,
+    });
+    expect(result).toHaveLength(3);
+    expect(result.map((so) => so.type)).toEqual(['index-pattern', 'visualization', 'dashboard']);
+  });
+});
+
+describe('filterSavedObjectsForUnsupportedEngine()', () => {
+  it('drops non index-pattern objects and strips skipped fields', () => {
+    const indexPattern: SavedObject<any> = {
+      id: 'ip',
+      type: 'index-pattern',
+      attributes: {
+        title: 'logs',
+        fields: JSON.stringify([
+          { name: 'geo.coordinates', type: 'geo_point' },
+          { name: 'bytes', type: 'number' },
+        ]),
+      },
+      references: [],
+    };
+    const viz: SavedObject<any> = {
+      id: 'v',
+      type: 'visualization',
+      attributes: { title: 'v' },
+      references: [],
+    };
+    const result = filterSavedObjectsForUnsupportedEngine([indexPattern, viz], ['geo']);
+    expect(result).toHaveLength(1);
+    const fields = JSON.parse((result[0].attributes as any).fields);
+    expect(fields.map((f: any) => f.name)).toEqual(['bytes']);
+  });
+
+  it('does not mutate the input index-pattern attributes', () => {
+    const fieldsString = JSON.stringify([
+      { name: 'geo.src', type: 'string' },
+      { name: 'bytes', type: 'number' },
+    ]);
+    const indexPattern: SavedObject<any> = {
+      id: 'ip',
+      type: 'index-pattern',
+      attributes: { title: 'logs', fields: fieldsString },
+      references: [],
+    };
+    filterSavedObjectsForUnsupportedEngine([indexPattern], ['geo']);
+    expect((indexPattern.attributes as any).fields).toBe(fieldsString);
+  });
+
+  it('leaves index-pattern unchanged when there are no fields to skip', () => {
+    const fieldsString = JSON.stringify([{ name: 'geo.src', type: 'string' }]);
+    const indexPattern: SavedObject<any> = {
+      id: 'ip',
+      type: 'index-pattern',
+      attributes: { title: 'logs', fields: fieldsString },
+      references: [],
+    };
+    const result = filterSavedObjectsForUnsupportedEngine([indexPattern], []);
+    expect((result[0].attributes as any).fields).toBe(fieldsString);
+  });
+});
+
+describe('omitMappingFields()', () => {
+  it('removes the given top-level fields from the mappings properties', () => {
+    const fields = {
+      geo: { properties: { coordinates: { type: 'geo_point' } } },
+      bytes: { type: 'long' },
+      timestamp: { type: 'date' },
+    };
+    expect(omitMappingFields(fields, ['geo'])).toEqual({
+      bytes: { type: 'long' },
+      timestamp: { type: 'date' },
+    });
+  });
+
+  it('returns the same object when there is nothing to omit', () => {
+    const fields = { bytes: { type: 'long' } };
+    expect(omitMappingFields(fields, [])).toBe(fields);
+  });
+
+  it('does not mutate the original fields object', () => {
+    const fields = { geo: { type: 'geo_point' }, bytes: { type: 'long' } };
+    omitMappingFields(fields, ['geo']);
+    expect(fields).toHaveProperty('geo');
   });
 });
 

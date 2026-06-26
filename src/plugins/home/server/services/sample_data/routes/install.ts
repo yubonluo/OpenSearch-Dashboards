@@ -32,8 +32,14 @@ import { schema } from '@osd/config-schema';
 import { IRouter, LegacyCallAPIOptions, Logger } from 'src/core/server';
 import { SavedObjectsErrorHelpers } from '../../../../../../core/server';
 import { getWorkspaceState } from '../../../../../../core/server/utils';
-import { getFinalSavedObjects, getNestedField, setNestedField } from '../data_sets/util';
+import {
+  getFinalSavedObjects,
+  getNestedField,
+  setNestedField,
+  omitMappingFields,
+} from '../data_sets/util';
 import { createIndexName } from '../lib/create_index_name';
+import { isAnalyticEngineDataSource } from '../../../../../data/server';
 import { loadData } from '../lib/load_data';
 import { SampleDatasetSchema } from '../lib/sample_dataset_registry_types';
 import {
@@ -159,10 +165,28 @@ export function createInstallRoute(
         return res.internalError({ body: err });
       }
 
+      // Engines such as AnalyticEngine (Mustang) only support PPL queries, not
+      // OpenSearch DSL aggregations, and do not support geo (geo_point) fields.
+      // For these we strip geo from the mappings and documents and install only
+      // the index-pattern saved objects (skip DSL visualizations/dashboards).
+      const engineSupported = !(await isAnalyticEngineDataSource(
+        dataSourceId,
+        context.core.savedObjects.client
+      ));
+
       for (let i = 0; i < sampleDataset.dataIndices.length; i++) {
         const dataIndexConfig = sampleDataset.dataIndices[i];
         const index =
           dataIndexConfig.indexName ?? createIndexName(sampleDataset.id, dataIndexConfig.id);
+
+        // Field names whose mapping types (geo_point, alias, ...) are not
+        // supported by the target engine. These are removed from the mappings;
+        // combined with `dynamic: false` the documents may still contain these
+        // fields (they are kept in _source but not indexed), so the dataset
+        // file itself does not need to change.
+        const fieldsToSkip = engineSupported
+          ? []
+          : dataIndexConfig.fieldsToSkipForUnsupportedEngine ?? [];
 
         // clean up any old installation of dataset
         try {
@@ -180,7 +204,15 @@ export function createInstallRoute(
               settings: dataSourceId
                 ? { index: { number_of_shards: 1 } }
                 : { index: { number_of_shards: 1, auto_expand_replicas: '0-1' } },
-              mappings: { properties: dataIndexConfig.fields },
+              mappings: engineSupported
+                ? { properties: dataIndexConfig.fields }
+                : {
+                    // Ignore (store in _source but do not index) any document
+                    // field that is not in the mappings, so docs that still
+                    // contain unsupported fields (e.g. geo) ingest cleanly.
+                    dynamic: false,
+                    properties: omitMappingFields(dataIndexConfig.fields, fieldsToSkip),
+                  },
             },
           };
           await caller('indices.create', createIndexParams);
@@ -212,6 +244,7 @@ export function createInstallRoute(
         workspaceId,
         dataSourceId,
         dataSourceTitle,
+        isEngineSupported: engineSupported,
       });
 
       try {

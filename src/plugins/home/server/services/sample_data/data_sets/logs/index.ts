@@ -76,6 +76,11 @@ export const logsSpecProvider = function (): SampleDatasetSchema {
         timeFields: ['timestamp', 'utc_time'],
         currentTimeMarker: '2018-08-01T00:00:00',
         preserveDayOfWeekTimeOfDay: true,
+        // geo.* is geo_point and @timestamp is an `alias` field; neither type
+        // is supported by engines such as AnalyticEngine. Both are removed from
+        // the mappings (alias fields are mapping-only and never appear in the
+        // documents, so they cannot be stripped per-document).
+        fieldsToSkipForUnsupportedEngine: ['geo', '@timestamp'],
       },
     ],
     status: 'not_installed',
