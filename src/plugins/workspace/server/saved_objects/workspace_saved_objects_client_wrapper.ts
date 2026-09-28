@@ -316,12 +316,12 @@ export class WorkspaceSavedObjectsClientWrapper {
 
       /**
        *
-       * If target workspaces parameter doesn't exists and `overwrite` is true, we need to check
-       * if it has permission to the object itself(defined by the object ACL) or it has permission
-       * to any of the workspaces that the object associates with.
+       * When `overwrite` is true, a bulkCreate on an existing id is really an update, so we must
+       * check the caller has permission to the object being overwritten - either `Write` on the
+       * object ACL or `LibraryWrite` on any workspace it belongs to.
        *
        */
-      if (!hasTargetWorkspaces && options.overwrite) {
+      if (options.overwrite) {
         for (const object of objects) {
           const { type, id } = object;
           if (id) {
@@ -587,6 +587,44 @@ export class WorkspaceSavedObjectsClientWrapper {
       return await wrapperOptions.client.deleteByWorkspace(workspace, options);
     };
 
+    /**
+     * Associating (`addToWorkspaces`) or dissociating (`deleteFromWorkspaces`) a saved object
+     * changes which workspaces can see and write it, so it requires the same permissions as an
+     * update. The caller must both:
+     *   1. be able to write the object itself - `Write` on the object ACL, or `LibraryWrite`
+     *      on any workspace it currently belongs to; and
+     *   2. have `LibraryWrite` on every target workspace being added or removed.
+     **/
+    const validateObjectAndTargetWorkspacesForAssociation = async (
+      type: string,
+      id: string,
+      targetWorkspaces: string[],
+      options: SavedObjectsBaseOptions = {}
+    ) => {
+      const object = await wrapperOptions.client.get(type, id, options);
+      this.permissionControl.addToCacheAllowlist(
+        wrapperOptions.request,
+        getWorkspacesFromSavedObjects([object])
+      );
+      const permittedOnObject = await this.validateWorkspacesAndSavedObjectsPermissions(
+        object,
+        wrapperOptions.request,
+        [WorkspacePermissionMode.LibraryWrite],
+        [WorkspacePermissionMode.Write],
+        false
+      );
+      const permittedOnTargetWorkspaces = await this.validateMultiWorkspacesPermissions(
+        targetWorkspaces,
+        wrapperOptions.request,
+        [WorkspacePermissionMode.LibraryWrite]
+      );
+      if (!permittedOnObject || !permittedOnTargetWorkspaces) {
+        ACLAuditor?.increment(ACLAuditorStateKey.VALIDATE_FAILURE, 1);
+        throw generateSavedObjectsPermissionError();
+      }
+      ACLAuditor?.increment(ACLAuditorStateKey.VALIDATE_SUCCESS, 1);
+    };
+
     const addToWorkspacesWithPermissionControl = async (
       type: string,
       id: string,
@@ -598,8 +636,7 @@ export class WorkspaceSavedObjectsClientWrapper {
         ACLAuditor?.increment(ACLAuditorStateKey.VALIDATE_FAILURE, 1);
         throw generateOSDAdminPermissionError();
       }
-      ACLAuditor?.increment(ACLAuditorStateKey.VALIDATE_SUCCESS, 1);
-      // In current version, only the type is data-source and data-connection that will call addToWorkspaces
+      await validateObjectAndTargetWorkspacesForAssociation(type, id, targetWorkspaces, options);
       return await wrapperOptions.client.addToWorkspaces(type, id, targetWorkspaces, options);
     };
 
@@ -614,8 +651,7 @@ export class WorkspaceSavedObjectsClientWrapper {
         ACLAuditor?.increment(ACLAuditorStateKey.VALIDATE_FAILURE, 1);
         throw generateOSDAdminPermissionError();
       }
-      ACLAuditor?.increment(ACLAuditorStateKey.VALIDATE_SUCCESS, 1);
-      // In current version, only the type is data-source and data-connection will that call deleteFromWorkspaces
+      await validateObjectAndTargetWorkspacesForAssociation(type, id, targetWorkspaces, options);
       return await wrapperOptions.client.deleteFromWorkspaces(type, id, targetWorkspaces, options);
     };
 
